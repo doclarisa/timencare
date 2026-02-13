@@ -27,6 +27,33 @@ export const Colors = {
   },
 };
 
+/** Colors for event types */
+export const EventColors = {
+  WORK: '#4A90D9',
+  MEDS: '#E8833A',
+  OTHER: '#7B68EE',
+} as const;
+
+/** Semantic status colors */
+export const StatusColors = {
+  success: '#34C759',
+  danger: '#FF3B30',
+  warning: '#FF9500',
+  info: '#0a7ea4',
+} as const;
+
+/** Preset color options for event form */
+export const PresetEventColors = [
+  '#4A90D9',
+  '#34C759',
+  '#FF3B30',
+  '#FF9500',
+  '#7B68EE',
+  '#E8833A',
+  '#FF2D55',
+  '#5AC8FA',
+] as const;
+
 export const Fonts = Platform.select({
   ios: {
     /** iOS `UIFontDescriptorSystemDesignDefault` */
