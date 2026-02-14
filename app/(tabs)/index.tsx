@@ -1,98 +1,138 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
+import { useEffect, useState, useCallback } from 'react';
+import { StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTimer } from '@/hooks/use-timer';
+import { useNotifications } from '@/hooks/use-notifications';
+import { CountdownDisplay } from '@/components/timer/countdown-display';
+import { SessionControls } from '@/components/timer/session-controls';
+import { ShiftInfo } from '@/components/timer/shift-info';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { useThemeColor } from '@/hooks/use-theme-color';
 
-export default function HomeScreen() {
+export default function TimerScreen() {
+  const {
+    shift,
+    session,
+    secondsRemaining,
+    status,
+    clockIn,
+    clockOut,
+    acknowledge,
+    refresh,
+  } = useTimer();
+  const { scheduleShiftReminders, cancelScheduled } = useNotifications();
+  const bgColor = useThemeColor({}, 'background');
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Schedule notifications when shift loads
+  useEffect(() => {
+    if (shift) {
+      scheduleShiftReminders(shift);
+    }
+    return () => {
+      cancelScheduled();
+    };
+  }, [shift?.id]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    refresh();
+    setRefreshing(false);
+  }, [refresh]);
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
+    <SafeAreaView style={[styles.safe, { backgroundColor: bgColor }]} edges={['top']}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        <ThemedText type="title" style={styles.header}>
+          Timer
         </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+        {!shift ? (
+          <ThemedView style={styles.emptyState}>
+            <ThemedText style={styles.emptyIcon}>
+              {'\u23F0'}
+            </ThemedText>
+            <ThemedText type="subtitle" style={styles.emptyTitle}>
+              No Shift Scheduled
+            </ThemedText>
+            <ThemedText style={styles.emptyBody}>
+              Add a WORK event for today in the Calendar tab to start tracking time.
+            </ThemedText>
+          </ThemedView>
+        ) : (
+          <ThemedView style={styles.timerContent}>
+            <ShiftInfo shift={shift} status={status} />
+            {session && (
+              <CountdownDisplay
+                secondsRemaining={secondsRemaining}
+                status={status}
+              />
+            )}
+            <SessionControls
+              status={status}
+              onClockIn={clockIn}
+              onClockOut={clockOut}
+              onAcknowledge={acknowledge}
+            />
+            {session && (
+              <ThemedText style={styles.clockedInAt}>
+                Clocked in at {new Date(session.clockInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </ThemedText>
+            )}
+          </ThemedView>
+        )}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  safe: {
+    flex: 1,
   },
-  stepContainer: {
-    gap: 8,
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 32,
+  },
+  header: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 24,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    gap: 12,
+  },
+  emptyIcon: {
+    fontSize: 64,
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  emptyTitle: {
+    textAlign: 'center',
+  },
+  emptyBody: {
+    textAlign: 'center',
+    opacity: 0.6,
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  timerContent: {
+    flex: 1,
+    gap: 24,
+    paddingTop: 8,
+  },
+  clockedInAt: {
+    textAlign: 'center',
+    opacity: 0.5,
+    fontSize: 14,
   },
 });

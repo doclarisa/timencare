@@ -3,7 +3,6 @@ import {
   View,
   Pressable,
   StyleSheet,
-  type ViewStyle,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Animated, {
@@ -39,8 +38,6 @@ export function PinInput({
 }: PinInputProps) {
   const [digits, setDigits] = useState<string[]>([]);
   const tint = useThemeColor({}, 'tint');
-  const textColor = useThemeColor({}, 'text');
-  const bgColor = useThemeColor({}, 'background');
 
   // Shake animation on error
   const shakeX = useSharedValue(0);
