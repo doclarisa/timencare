@@ -28,44 +28,56 @@ function formatDuration(totalSeconds: number): string {
 export function CountdownDisplay({ secondsRemaining, status, totalShiftSeconds }: CountdownDisplayProps) {
   const opacity = useSharedValue(1);
 
+  const isAlarm = status === 'start_alarm' || status === 'end_alarm';
+
   useEffect(() => {
-    if (status === 'alerting') {
+    if (isAlarm) {
       opacity.value = withRepeat(withTiming(0.3, { duration: 500 }), -1, true);
     } else {
       cancelAnimation(opacity);
       opacity.value = 1;
     }
-  }, [status, opacity]);
+  }, [isAlarm, opacity]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
   }));
 
-  const isNegative = secondsRemaining < 0;
-  const timeString = `${isNegative ? '-' : ''}${formatDuration(secondsRemaining)}`;
+  const timeString = formatDuration(secondsRemaining);
 
-  const isOvertime = status === 'alerting' || isNegative;
-  const isWarning = status === 'overtime' || (secondsRemaining > 0 && secondsRemaining <= 300);
+  let label = 'SHIFT DURATION';
+  let timeColor = '#1F2937';
 
-  const label = isOvertime
-    ? 'OVERTIME'
-    : (status === 'active' || isWarning)
-    ? 'TIME REMAINING'
-    : 'STARTS IN';
-
-  const timeColor = isOvertime
-    ? StatusColors.danger
-    : isWarning
-    ? StatusColors.warning
-    : '#1F2937';
+  if (status === 'waiting') {
+    label = 'SHIFT DURATION';
+    timeColor = '#1F2937';
+  } else if (status === 'start_alarm') {
+    label = 'SHIFT STARTING — TAP START';
+    timeColor = StatusColors.warning;
+  } else if (status === 'active') {
+    label = 'TIME REMAINING';
+    timeColor = '#1F2937';
+    if (secondsRemaining <= 300) {
+      timeColor = StatusColors.warning;
+    }
+  } else if (status === 'paused') {
+    label = 'PAUSED';
+    timeColor = '#6B7280';
+  } else if (status === 'end_alarm') {
+    label = 'SHIFT ENDED — TAP STOP';
+    timeColor = StatusColors.danger;
+  } else if (status === 'completed') {
+    label = 'SHIFT COMPLETE';
+    timeColor = StatusColors.success;
+  }
 
   return (
     <View>
-      <ThemedText style={[styles.label, isOvertime && { color: StatusColors.danger }]}>
+      <ThemedText style={[styles.label, isAlarm && { color: StatusColors.danger }]}>
         {label}
       </ThemedText>
 
-      <Animated.Text style={[styles.time, { color: timeColor }, animatedStyle]}>
+      <Animated.Text style={[styles.time, { color: timeColor }, isAlarm && animatedStyle]}>
         {timeString}
       </Animated.Text>
 

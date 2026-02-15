@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { StyleSheet, ScrollView, RefreshControl, Image, Pressable, View, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTimer } from '@/hooks/use-timer';
@@ -19,10 +19,13 @@ export default function TimerScreen() {
   const {
     shift,
     secondsRemaining,
+    totalShiftSeconds,
     status,
     clockIn,
+    pause,
+    resume,
     clockOut,
-    acknowledge,
+    reset,
     refresh,
   } = useTimer();
   const { createEvent } = useEvents();
@@ -33,14 +36,6 @@ export default function TimerScreen() {
   const [showAddForm, setShowAddForm] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
-
-  // Calculate total shift duration in seconds
-  const totalShiftSeconds = useMemo(() => {
-    if (!shift) return 0;
-    const start = new Date(shift.startAt).getTime();
-    const end = new Date(shift.endAt).getTime();
-    return Math.floor((end - start) / 1000);
-  }, [shift?.startAt, shift?.endAt]);
 
   // Schedule notifications when shift loads
   useEffect(() => {
@@ -61,8 +56,7 @@ export default function TimerScreen() {
   const handleSaveEvent = async (data: EventFormData) => {
     const newEvent = createEvent(data);
     setShowAddForm(false);
-    refresh(); // Reload timer to pick up new shift
-    // Schedule notifications for the new event
+    refresh();
     if (newEvent) {
       await scheduleShiftReminders(newEvent);
     }
@@ -111,9 +105,11 @@ export default function TimerScreen() {
 
               <SessionControls
                 status={status}
-                onClockIn={clockIn}
-                onClockOut={clockOut}
-                onAcknowledge={acknowledge}
+                onStart={clockIn}
+                onPause={pause}
+                onResume={resume}
+                onStop={clockOut}
+                onReset={reset}
               />
             </View>
           </View>

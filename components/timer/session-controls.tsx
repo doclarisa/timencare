@@ -5,40 +5,76 @@ import { type TimerStatus } from '@/hooks/use-timer';
 
 interface SessionControlsProps {
   status: TimerStatus;
-  onClockIn: () => void;
-  onClockOut: () => void;
-  onAcknowledge: () => void;
+  onStart: () => void;
+  onPause: () => void;
+  onResume: () => void;
+  onStop: () => void;
+  onReset: () => void;
 }
 
 export function SessionControls({
   status,
-  onClockIn,
-  onClockOut,
-  onAcknowledge,
+  onStart,
+  onPause,
+  onResume,
+  onStop,
+  onReset,
 }: SessionControlsProps) {
   const handlePress = (action: () => void) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     action();
   };
 
-  const isActive = status === 'active' || status === 'overtime';
-  const isAlerting = status === 'alerting';
+  const isActive = status === 'active';
+  const isPaused = status === 'paused';
+  const isStartAlarm = status === 'start_alarm';
+  const isEndAlarm = status === 'end_alarm';
+  const isCompleted = status === 'completed';
+
+  // Start button: enabled during start_alarm or paused
+  const startEnabled = isStartAlarm || isPaused;
+  // Pause button: enabled during active
+  const pauseEnabled = isActive;
+  // Stop/Reset button: enabled during end_alarm, active, paused, or completed
+  const stopEnabled = isEndAlarm || isActive || isPaused || isCompleted;
+
+  const startLabel = isStartAlarm ? 'Start' : isPaused ? 'Resume' : 'Start';
+  const startSub = isStartAlarm ? 'Stop alarm & go' : isPaused ? 'Continue timer' : 'Begin shift';
+
+  const stopLabel = isEndAlarm ? 'Stop' : 'Reset';
+  const stopSub = isEndAlarm ? 'Stop alarm' : 'Clear timer';
+
+  const handleStartPress = () => {
+    if (isStartAlarm) {
+      handlePress(onStart);
+    } else if (isPaused) {
+      handlePress(onResume);
+    }
+  };
+
+  const handleStopPress = () => {
+    if (isEndAlarm) {
+      handlePress(onStop);
+    } else {
+      handlePress(onReset);
+    }
+  };
 
   return (
     <View style={styles.row}>
-      {/* START button */}
+      {/* START / RESUME button */}
       <Pressable
         style={({ pressed }) => [
           styles.btn,
           styles.startBtn,
-          pressed && styles.pressed,
-          isActive && styles.disabled,
+          pressed && startEnabled && styles.pressed,
+          !startEnabled && styles.disabled,
         ]}
-        onPress={() => handlePress(onClockIn)}
-        disabled={isActive}
+        onPress={handleStartPress}
+        disabled={!startEnabled}
       >
-        <ThemedText style={styles.startLabel}>Start</ThemedText>
-        <ThemedText style={styles.startSub}>Resume timer</ThemedText>
+        <ThemedText style={styles.startLabel}>{startLabel}</ThemedText>
+        <ThemedText style={styles.startSub}>{startSub}</ThemedText>
       </Pressable>
 
       {/* PAUSE button */}
@@ -46,29 +82,33 @@ export function SessionControls({
         style={({ pressed }) => [
           styles.btn,
           styles.pauseBtn,
-          pressed && styles.pressed,
-          !isActive && !isAlerting && styles.disabled,
+          pressed && pauseEnabled && styles.pressed,
+          !pauseEnabled && styles.disabled,
         ]}
-        onPress={() => handlePress(isAlerting ? onAcknowledge : onClockOut)}
-        disabled={!isActive && !isAlerting}
+        onPress={() => handlePress(onPause)}
+        disabled={!pauseEnabled}
       >
         <ThemedText style={styles.pauseLabel}>Pause</ThemedText>
-        <ThemedText style={styles.pauseSub}>Hold</ThemedText>
+        <ThemedText style={styles.pauseSub}>Hold timer</ThemedText>
       </Pressable>
 
-      {/* RESET button */}
+      {/* STOP / RESET button */}
       <Pressable
         style={({ pressed }) => [
           styles.btn,
-          styles.resetBtn,
-          pressed && styles.pressed,
-          !isActive && !isAlerting && styles.disabled,
+          isEndAlarm ? styles.stopBtn : styles.resetBtn,
+          pressed && stopEnabled && styles.pressed,
+          !stopEnabled && styles.disabled,
         ]}
-        onPress={() => handlePress(onClockOut)}
-        disabled={!isActive && !isAlerting}
+        onPress={handleStopPress}
+        disabled={!stopEnabled}
       >
-        <ThemedText style={styles.resetLabel}>Reset</ThemedText>
-        <ThemedText style={styles.resetSub}>Clear</ThemedText>
+        <ThemedText style={isEndAlarm ? styles.stopLabel : styles.resetLabel}>
+          {stopLabel}
+        </ThemedText>
+        <ThemedText style={isEndAlarm ? styles.stopSub : styles.resetSub}>
+          {stopSub}
+        </ThemedText>
       </Pressable>
     </View>
   );
@@ -138,5 +178,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#6B7280',
+  },
+  // Stop - Orange (when end alarm)
+  stopBtn: {
+    backgroundColor: '#F97316',
+  },
+  stopLabel: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: 'white',
+    marginBottom: 4,
+  },
+  stopSub: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.9)',
   },
 });

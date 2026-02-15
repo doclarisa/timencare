@@ -8,8 +8,16 @@ import { useAuth } from '@/contexts/auth-context';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { getNotificationPermissionStatus, requestNotificationPermissions } from '@/lib/notifications';
 import { StatusColors } from '@/constants/theme';
+import {
+  previewAlarm,
+  saveAlarmSound,
+  loadAlarmSound,
+  saveVolume,
+  loadVolume,
+  type AlarmSoundId,
+} from '@/lib/alarm-sounds';
 
-const ALARM_SOUNDS = [
+const ALARM_SOUNDS: { id: AlarmSoundId; name: string; description: string; icon: string }[] = [
   { id: 'chime', name: 'Chime', description: 'Pleasant bell tone', icon: '\uD83D\uDD14' },
   { id: 'beep', name: 'Beep', description: 'Classic beep', icon: '\uD83D\uDD0A' },
   { id: 'buzz', name: 'Buzz', description: 'Attention buzz', icon: '\uD83D\uDCE2' },
@@ -25,16 +33,31 @@ export default function ToolsScreen() {
   const [notifStatus, setNotifStatus] = useState('unknown');
   const [shiftStartWarning, setShiftStartWarning] = useState(15);
   const [shiftEndWarning, setShiftEndWarning] = useState(15);
-  const [selectedSound, setSelectedSound] = useState('chime');
+  const [selectedSound, setSelectedSound] = useState<AlarmSoundId>('chime');
   const [volume, setVolume] = useState(100);
 
+  // Load saved settings
   useEffect(() => {
     getNotificationPermissionStatus().then(setNotifStatus);
+    loadAlarmSound().then(setSelectedSound);
+    loadVolume().then(setVolume);
   }, []);
 
   const handleRequestNotifications = async () => {
     const granted = await requestNotificationPermissions();
     setNotifStatus(granted ? 'granted' : 'denied');
+  };
+
+  const handleSelectSound = async (soundId: AlarmSoundId) => {
+    setSelectedSound(soundId);
+    await saveAlarmSound(soundId);
+    // Play a preview at the current volume
+    await previewAlarm(soundId, volume / 100);
+  };
+
+  const handleVolumeChange = async (newVolume: number) => {
+    setVolume(newVolume);
+    await saveVolume(newVolume);
   };
 
   return (
@@ -147,7 +170,7 @@ export default function ToolsScreen() {
             <View style={styles.buttonRow}>
               <Pressable
                 style={styles.adjustButton}
-                onPress={() => setVolume(Math.max(0, volume - 10))}
+                onPress={() => handleVolumeChange(Math.max(0, volume - 10))}
               >
                 <ThemedText style={styles.adjustButtonText}>{'\u2212'}</ThemedText>
               </Pressable>
@@ -156,7 +179,7 @@ export default function ToolsScreen() {
               </View>
               <Pressable
                 style={styles.adjustButton}
-                onPress={() => setVolume(Math.min(100, volume + 10))}
+                onPress={() => handleVolumeChange(Math.min(100, volume + 10))}
               >
                 <ThemedText style={styles.adjustButtonText}>+</ThemedText>
               </Pressable>
@@ -165,11 +188,12 @@ export default function ToolsScreen() {
 
           {/* Sound Selection */}
           <ThemedText style={styles.settingLabel}>Alert Sound</ThemedText>
+          <ThemedText style={styles.settingHelp}>Tap to preview and select</ThemedText>
           <View style={styles.soundGrid}>
             {ALARM_SOUNDS.map((sound) => (
               <Pressable
                 key={sound.id}
-                onPress={() => setSelectedSound(sound.id)}
+                onPress={() => handleSelectSound(sound.id)}
                 style={[
                   styles.soundButton,
                   selectedSound === sound.id && styles.soundButtonSelected,

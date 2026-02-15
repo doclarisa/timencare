@@ -20,8 +20,10 @@ function getStatusLabel(status: TimerStatus): string {
   switch (status) {
     case 'active': return 'Active';
     case 'waiting': return 'Upcoming';
-    case 'overtime': return 'Ending Soon';
-    case 'alerting': return 'Overtime';
+    case 'start_alarm': return 'Starting';
+    case 'paused': return 'Paused';
+    case 'end_alarm': return 'Shift Ended';
+    case 'completed': return 'Complete';
     default: return '';
   }
 }
@@ -49,7 +51,7 @@ export function ShiftInfo({ shift, status, onClientPress }: ShiftInfoProps) {
     : 'Visit';
 
   const statusLabel = getStatusLabel(status);
-  const isActive = status === 'active' || status === 'overtime';
+  const isActive = status === 'active' || status === 'start_alarm' || status === 'end_alarm';
 
   return (
     <Pressable
