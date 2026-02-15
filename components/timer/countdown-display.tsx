@@ -60,7 +60,7 @@ export function CountdownDisplay({ secondsRemaining, status, totalShiftSeconds }
     : '#1F2937';
 
   return (
-    <View style={styles.container}>
+    <View>
       <ThemedText style={[styles.label, isOvertime && { color: StatusColors.danger }]}>
         {label}
       </ThemedText>
@@ -79,41 +79,30 @@ export function CountdownDisplay({ secondsRemaining, status, totalShiftSeconds }
 }
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 28,
-    marginHorizontal: 16,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
-  },
   label: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '800',
     color: '#6B7280',
-    letterSpacing: 1.5,
-    marginBottom: 12,
+    letterSpacing: 1,
+    marginBottom: 16,
   },
   time: {
-    fontSize: 52,
-    fontWeight: '800',
+    fontSize: 72,
+    fontWeight: '900',
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-    textAlign: 'center',
-    letterSpacing: -1,
+    letterSpacing: -2,
     fontVariant: ['tabular-nums'],
+    marginBottom: 8,
   },
   totalShift: {
     fontSize: 14,
-    color: '#9CA3AF',
-    marginTop: 12,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginBottom: 24,
   },
   totalShiftBold: {
     fontWeight: '700',
-    color: '#6B7280',
+    color: '#1F2937',
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
 });

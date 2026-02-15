@@ -21,93 +21,122 @@ export function SessionControls({
     action();
   };
 
-  if (status === 'alerting') {
-    return (
-      <View style={styles.container}>
-        <Pressable
-          style={({ pressed }) => [styles.btn, styles.btnWarning, pressed && styles.pressed]}
-          onPress={() => handlePress(onAcknowledge)}
-        >
-          <ThemedText style={styles.btnLabel}>Dismiss</ThemedText>
-          <ThemedText style={styles.btnSub}>Stop alert</ThemedText>
-        </Pressable>
-        <Pressable
-          style={({ pressed }) => [styles.btn, styles.btnDanger, pressed && styles.pressed]}
-          onPress={() => handlePress(onClockOut)}
-        >
-          <ThemedText style={styles.btnLabel}>Clock Out</ThemedText>
-          <ThemedText style={styles.btnSub}>End shift</ThemedText>
-        </Pressable>
-      </View>
-    );
-  }
+  const isActive = status === 'active' || status === 'overtime';
+  const isAlerting = status === 'alerting';
 
-  if (status === 'active' || status === 'overtime') {
-    return (
-      <View style={styles.container}>
-        <Pressable
-          style={({ pressed }) => [styles.btn, styles.btnDanger, pressed && styles.pressed]}
-          onPress={() => handlePress(onClockOut)}
-        >
-          <ThemedText style={styles.btnLabel}>Clock Out</ThemedText>
-          <ThemedText style={styles.btnSub}>End shift</ThemedText>
-        </Pressable>
-      </View>
-    );
-  }
+  return (
+    <View style={styles.row}>
+      {/* START button */}
+      <Pressable
+        style={({ pressed }) => [
+          styles.btn,
+          styles.startBtn,
+          pressed && styles.pressed,
+          isActive && styles.disabled,
+        ]}
+        onPress={() => handlePress(onClockIn)}
+        disabled={isActive}
+      >
+        <ThemedText style={styles.startLabel}>Start</ThemedText>
+        <ThemedText style={styles.startSub}>Resume timer</ThemedText>
+      </Pressable>
 
-  if (status === 'waiting') {
-    return (
-      <View style={styles.container}>
-        <Pressable
-          style={({ pressed }) => [styles.btn, styles.btnSuccess, pressed && styles.pressed]}
-          onPress={() => handlePress(onClockIn)}
-        >
-          <ThemedText style={styles.btnLabel}>Start</ThemedText>
-          <ThemedText style={styles.btnSub}>Clock in</ThemedText>
-        </Pressable>
-      </View>
-    );
-  }
+      {/* PAUSE button */}
+      <Pressable
+        style={({ pressed }) => [
+          styles.btn,
+          styles.pauseBtn,
+          pressed && styles.pressed,
+          !isActive && !isAlerting && styles.disabled,
+        ]}
+        onPress={() => handlePress(isAlerting ? onAcknowledge : onClockOut)}
+        disabled={!isActive && !isAlerting}
+      >
+        <ThemedText style={styles.pauseLabel}>Pause</ThemedText>
+        <ThemedText style={styles.pauseSub}>Hold</ThemedText>
+      </Pressable>
 
-  return null;
+      {/* RESET button */}
+      <Pressable
+        style={({ pressed }) => [
+          styles.btn,
+          styles.resetBtn,
+          pressed && styles.pressed,
+          !isActive && !isAlerting && styles.disabled,
+        ]}
+        onPress={() => handlePress(onClockOut)}
+        disabled={!isActive && !isAlerting}
+      >
+        <ThemedText style={styles.resetLabel}>Reset</ThemedText>
+        <ThemedText style={styles.resetSub}>Clear</ThemedText>
+      </Pressable>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  row: {
     flexDirection: 'row',
     gap: 12,
-    paddingHorizontal: 16,
   },
   btn: {
     flex: 1,
-    paddingVertical: 16,
-    borderRadius: 14,
+    borderRadius: 16,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  btnSuccess: {
-    backgroundColor: '#EF4444',
-  },
-  btnDanger: {
-    backgroundColor: '#1F2937',
-  },
-  btnWarning: {
-    backgroundColor: '#F59E0B',
   },
   pressed: {
     opacity: 0.85,
     transform: [{ scale: 0.97 }],
   },
-  btnLabel: {
+  disabled: {
+    opacity: 0.45,
+  },
+  // Start - Red/Pink
+  startBtn: {
+    backgroundColor: '#EF4444',
+  },
+  startLabel: {
     fontSize: 18,
     fontWeight: '800',
     color: 'white',
+    marginBottom: 4,
   },
-  btnSub: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: 'rgba(255,255,255,0.7)',
-    marginTop: 2,
+  startSub: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.9)',
+  },
+  // Pause - Dark
+  pauseBtn: {
+    backgroundColor: '#1F2937',
+  },
+  pauseLabel: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: 'white',
+    marginBottom: 4,
+  },
+  pauseSub: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.8)',
+  },
+  // Reset - Light
+  resetBtn: {
+    backgroundColor: '#F3F4F6',
+  },
+  resetLabel: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  resetSub: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B7280',
   },
 });

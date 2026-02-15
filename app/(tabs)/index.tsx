@@ -18,7 +18,6 @@ export default function TimerScreen() {
   const router = useRouter();
   const {
     shift,
-    session,
     secondsRemaining,
     status,
     clockIn,
@@ -74,44 +73,35 @@ export default function TimerScreen() {
         </View>
 
         {!shift ? (
+          /* Empty state */
           <ThemedView style={styles.emptyState}>
             <ThemedText style={styles.emptyIcon}>{'\uD83D\uDCC5'}</ThemedText>
             <ThemedText style={styles.emptyTitle}>No Shifts Today</ThemedText>
             <ThemedText style={styles.emptyBody}>
-              Add a shift to get started
+              Tap Add to create a shift
             </ThemedText>
-            <Pressable
-              style={styles.emptyButton}
-              onPress={() => {
-                const today = new Date().toISOString().split('T')[0];
-                router.push(`/day/${today}`);
-              }}
-            >
-              <ThemedText style={styles.emptyButtonText}>+ Add First Shift</ThemedText>
-            </Pressable>
           </ThemedView>
         ) : (
+          /* Shift active layout */
           <View style={styles.timerContent}>
+            {/* Card 1: Current Shift */}
             <ShiftInfo shift={shift} status={status} onClientPress={setProfileClient} />
 
-            <CountdownDisplay
-              secondsRemaining={secondsRemaining}
-              status={status}
-              totalShiftSeconds={totalShiftSeconds}
-            />
+            {/* Card 2: Time Remaining + Controls */}
+            <View style={styles.timeCard}>
+              <CountdownDisplay
+                secondsRemaining={secondsRemaining}
+                status={status}
+                totalShiftSeconds={totalShiftSeconds}
+              />
 
-            <SessionControls
-              status={status}
-              onClockIn={clockIn}
-              onClockOut={clockOut}
-              onAcknowledge={acknowledge}
-            />
-
-            {session && (
-              <ThemedText style={styles.clockedInAt}>
-                Clocked in at {new Date(session.clockInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </ThemedText>
-            )}
+              <SessionControls
+                status={status}
+                onClockIn={clockIn}
+                onClockOut={clockOut}
+                onAcknowledge={acknowledge}
+              />
+            </View>
           </View>
         )}
       </ScrollView>
@@ -125,7 +115,7 @@ export default function TimerScreen() {
         />
       )}
 
-      {/* Floating Add Button */}
+      {/* Floating Add Button — above tab bar */}
       <Pressable
         style={styles.fab}
         onPress={() => {
@@ -146,17 +136,21 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 100,
+    paddingBottom: 160,
   },
+  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.04)',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    backgroundColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   logo: {
     width: 160,
@@ -165,75 +159,67 @@ const styles = StyleSheet.create({
   // Empty state
   emptyState: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 32,
-    paddingVertical: 80,
+    paddingVertical: 120,
+    paddingHorizontal: 40,
   },
   emptyIcon: {
-    fontSize: 56,
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#4B5563',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptyBody: {
-    textAlign: 'center',
-    fontSize: 15,
-    color: '#9CA3AF',
+    fontSize: 80,
     marginBottom: 24,
   },
-  emptyButton: {
-    backgroundColor: '#3B82F6',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
+  emptyTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#1F2937',
+    marginBottom: 12,
   },
-  emptyButtonText: {
-    color: 'white',
+  emptyBody: {
     fontSize: 16,
-    fontWeight: '700',
+    color: '#6B7280',
   },
   // Timer content
   timerContent: {
-    gap: 16,
-    paddingTop: 16,
+    gap: 20,
+    paddingTop: 20,
   },
-  clockedInAt: {
-    textAlign: 'center',
-    fontSize: 13,
-    color: '#9CA3AF',
+  // Time Remaining card (wraps countdown + controls)
+  timeCard: {
+    backgroundColor: 'white',
+    borderRadius: 24,
+    padding: 24,
+    marginHorizontal: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  // FAB
+  // FAB — positioned above tab navigation
   fab: {
     position: 'absolute',
     right: 20,
-    bottom: 20,
+    bottom: 100,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#3B82F6',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
     borderRadius: 28,
-    gap: 6,
+    gap: 8,
     shadowColor: '#3B82F6',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.4,
     shadowRadius: 12,
-    elevation: 8,
+    elevation: 12,
   },
   fabPlus: {
-    fontSize: 22,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '800',
     color: 'white',
   },
   fabLabel: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '800',
     color: 'white',
   },
 });
