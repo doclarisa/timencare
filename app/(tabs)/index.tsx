@@ -52,7 +52,7 @@ export default function TimerScreen() {
       >
         <ThemedView style={styles.header}>
           <Image
-            source={require('@/assets/images/timencare-logo.png')}
+            source={require('@/assets/images/LOGOwebsite1.png')}
             style={styles.logo}
             resizeMode="contain"
           />

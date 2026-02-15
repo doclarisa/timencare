@@ -35,14 +35,16 @@ export default function TabLayout() {
         options={{
           title: 'Timer',
           headerShown: false,
+          tabBarActiveTintColor: '#EF4444',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="timer" color={color} />,
         }}
       />
       <Tabs.Screen
         name="calendar"
         options={{
-          title: 'Calendar',
+          title: 'Schedule',
           headerShown: false,
+          tabBarActiveTintColor: '#3B82F6',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="calendar.badge.clock" color={color} />,
         }}
       />
