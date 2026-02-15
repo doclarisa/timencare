@@ -21,12 +21,7 @@ const EVENT_TYPES: { value: EventType; label: string }[] = [
 ];
 
 const FORM_COLORS = [
-  '#3B82F6', // Blue
-  '#10B981', // Green
-  '#F59E0B', // Yellow
-  '#EF4444', // Red
-  '#8B5CF6', // Purple
-  '#EC4899', // Pink
+  '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899',
 ];
 
 interface EventFormProps {
@@ -57,32 +52,46 @@ export function EventForm({ initialDate, existingEvent, onSave, onCancel }: Even
   const textColor = useThemeColor({}, 'text');
   const borderColor = useThemeColor({}, 'icon');
 
-  // Smart defaults: round current time to nearest 5 min, end = start + 2h
+  const now = new Date();
   const defaultStart = existingEvent
     ? new Date(existingEvent.startAt)
-    : roundTo5(new Date());
-
+    : roundTo5(now);
   const defaultEnd = existingEvent
     ? new Date(existingEvent.endAt)
     : new Date(defaultStart.getTime() + 2 * 60 * 60 * 1000);
 
   const [clientName, setClientName] = useState(existingEvent?.clientName ?? '');
   const [type, setType] = useState<EventType>(existingEvent?.type ?? 'WORK');
-  const [startDate, setStartDate] = useState(defaultStart);
-  const [endDate, setEndDate] = useState(defaultEnd);
+  const [selectedDate, setSelectedDate] = useState(defaultStart);
+  const [startTime, setStartTime] = useState(defaultStart);
+  const [endTime, setEndTime] = useState(defaultEnd);
   const [notes, setNotes] = useState(existingEvent?.notes ?? '');
   const [colorHex, setColorHex] = useState(existingEvent?.colorHex ?? FORM_COLORS[0]);
   const [notifyEnabled, setNotifyEnabled] = useState(existingEvent?.notifyEnabled ?? false);
 
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
 
+  /** Combine the selected date with a time value */
+  function combineDateTime(date: Date, time: Date): Date {
+    const result = new Date(date);
+    result.setHours(time.getHours(), time.getMinutes(), 0, 0);
+    return result;
+  }
+
   const handleSave = () => {
     if (!clientName.trim()) return;
+    const start = combineDateTime(selectedDate, startTime);
+    const end = combineDateTime(selectedDate, endTime);
+    // If end is before start, assume next day
+    if (end <= start) {
+      end.setDate(end.getDate() + 1);
+    }
     onSave({
       clientName: clientName.trim(),
-      startAt: startDate.toISOString(),
-      endAt: endDate.toISOString(),
+      startAt: start.toISOString(),
+      endAt: end.toISOString(),
       type,
       notes: notes.trim(),
       colorHex,
@@ -90,9 +99,10 @@ export function EventForm({ initialDate, existingEvent, onSave, onCancel }: Even
     });
   };
 
-  const formatDateTime = (date: Date) =>
-    date.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) +
-    '  ' +
+  const formatDate = (date: Date) =>
+    date.toLocaleDateString([], { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' });
+
+  const formatTime = (date: Date) =>
     date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
   return (
@@ -127,18 +137,10 @@ export function EventForm({ initialDate, existingEvent, onSave, onCancel }: Even
               return (
                 <Pressable
                   key={t.value}
-                  style={[
-                    styles.typeButton,
-                    selected && styles.typeButtonSelected,
-                  ]}
+                  style={[styles.typeButton, selected && styles.typeButtonSelected]}
                   onPress={() => setType(t.value)}
                 >
-                  <ThemedText
-                    style={[
-                      styles.typeText,
-                      selected && styles.typeTextSelected,
-                    ]}
-                  >
+                  <ThemedText style={[styles.typeText, selected && styles.typeTextSelected]}>
                     {t.label}
                   </ThemedText>
                 </Pressable>
@@ -147,27 +149,52 @@ export function EventForm({ initialDate, existingEvent, onSave, onCancel }: Even
           </View>
         </View>
 
-        {/* Start Time */}
+        {/* Date (separate) */}
         <View style={styles.field}>
-          <ThemedText style={styles.label}>Start</ThemedText>
+          <ThemedText style={styles.label}>Date</ThemedText>
           <Pressable
-            style={[styles.timeButton, { borderColor: borderColor + '40' }]}
+            style={[styles.pickerButton, { borderColor: borderColor + '40' }]}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <ThemedText style={styles.pickerIcon}>{'\uD83D\uDCC5'}</ThemedText>
+            <ThemedText style={styles.pickerText}>{formatDate(selectedDate)}</ThemedText>
+          </Pressable>
+          {showDatePicker && (
+            <DateTimePicker
+              value={selectedDate}
+              mode="date"
+              display="default"
+              onChange={(_, date) => {
+                setShowDatePicker(Platform.OS === 'ios');
+                if (date) setSelectedDate(date);
+              }}
+            />
+          )}
+        </View>
+
+        {/* Start Time (separate) */}
+        <View style={styles.field}>
+          <ThemedText style={styles.label}>Start Time</ThemedText>
+          <Pressable
+            style={[styles.pickerButton, { borderColor: borderColor + '40' }]}
             onPress={() => setShowStartPicker(true)}
           >
-            <ThemedText style={styles.timeText}>{formatDateTime(startDate)}</ThemedText>
+            <ThemedText style={styles.pickerIcon}>{'\u23F0'}</ThemedText>
+            <ThemedText style={styles.pickerText}>{formatTime(startTime)}</ThemedText>
           </Pressable>
           {showStartPicker && (
             <DateTimePicker
-              value={startDate}
-              mode="datetime"
+              value={startTime}
+              mode="time"
+              display="default"
               minuteInterval={5}
               onChange={(_, date) => {
                 setShowStartPicker(Platform.OS === 'ios');
                 if (date) {
-                  setStartDate(date);
-                  // Auto-adjust end time to stay 2h ahead if end <= new start
-                  if (endDate <= date) {
-                    setEndDate(new Date(date.getTime() + 2 * 60 * 60 * 1000));
+                  setStartTime(date);
+                  // Auto-adjust end if needed
+                  if (endTime <= date) {
+                    setEndTime(new Date(date.getTime() + 2 * 60 * 60 * 1000));
                   }
                 }
               }}
@@ -175,24 +202,25 @@ export function EventForm({ initialDate, existingEvent, onSave, onCancel }: Even
           )}
         </View>
 
-        {/* End Time */}
+        {/* End Time (separate) */}
         <View style={styles.field}>
-          <ThemedText style={styles.label}>End</ThemedText>
+          <ThemedText style={styles.label}>End Time</ThemedText>
           <Pressable
-            style={[styles.timeButton, { borderColor: borderColor + '40' }]}
+            style={[styles.pickerButton, { borderColor: borderColor + '40' }]}
             onPress={() => setShowEndPicker(true)}
           >
-            <ThemedText style={styles.timeText}>{formatDateTime(endDate)}</ThemedText>
+            <ThemedText style={styles.pickerIcon}>{'\u23F1\uFE0F'}</ThemedText>
+            <ThemedText style={styles.pickerText}>{formatTime(endTime)}</ThemedText>
           </Pressable>
           {showEndPicker && (
             <DateTimePicker
-              value={endDate}
-              mode="datetime"
+              value={endTime}
+              mode="time"
+              display="default"
               minuteInterval={5}
-              minimumDate={startDate}
               onChange={(_, date) => {
                 setShowEndPicker(Platform.OS === 'ios');
-                if (date) setEndDate(date);
+                if (date) setEndTime(date);
               }}
             />
           )}
@@ -224,11 +252,7 @@ export function EventForm({ initialDate, existingEvent, onSave, onCancel }: Even
         <View style={styles.field}>
           <ThemedText style={styles.label}>Notes</ThemedText>
           <TextInput
-            style={[
-              styles.input,
-              styles.textArea,
-              { color: textColor, borderColor: borderColor + '40' },
-            ]}
+            style={[styles.input, styles.textArea, { color: textColor, borderColor: borderColor + '40' }]}
             value={notes}
             onChangeText={setNotes}
             placeholder="Add notes (optional)"
@@ -238,7 +262,7 @@ export function EventForm({ initialDate, existingEvent, onSave, onCancel }: Even
           />
         </View>
 
-        {/* Notify toggle */}
+        {/* Alert toggle */}
         <View style={[styles.field, styles.switchRow]}>
           <ThemedText style={styles.label}>Alert at start time</ThemedText>
           <Switch
@@ -269,17 +293,13 @@ export function EventForm({ initialDate, existingEvent, onSave, onCancel }: Even
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
+  flex: { flex: 1 },
   scrollContent: {
     padding: 20,
     gap: 20,
     paddingBottom: 40,
   },
-  field: {
-    gap: 8,
-  },
+  field: { gap: 8 },
   label: {
     fontSize: 14,
     fontWeight: '700',
@@ -297,10 +317,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   // Type buttons
-  typeRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
+  typeRow: { flexDirection: 'row', gap: 10 },
   typeButton: {
     flex: 1,
     paddingVertical: 12,
@@ -308,33 +325,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
     alignItems: 'center',
   },
-  typeButtonSelected: {
-    backgroundColor: '#3B82F6',
-  },
-  typeText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#6B7280',
-  },
-  typeTextSelected: {
-    color: 'white',
-  },
-  // Time buttons
-  timeButton: {
+  typeButtonSelected: { backgroundColor: '#3B82F6' },
+  typeText: { fontSize: 15, fontWeight: '700', color: '#6B7280' },
+  typeTextSelected: { color: 'white' },
+  // Picker buttons
+  pickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
+    gap: 10,
   },
-  timeText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  pickerIcon: { fontSize: 18 },
+  pickerText: { fontSize: 16, fontWeight: '600' },
   // Color picker
-  colorRow: {
-    flexDirection: 'row',
-    gap: 14,
-  },
+  colorRow: { flexDirection: 'row', gap: 14 },
   colorCircle: {
     width: 40,
     height: 40,
@@ -351,23 +358,15 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
-  colorCheck: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  // Switch row
+  colorCheck: { color: 'white', fontSize: 18, fontWeight: '900' },
+  // Switch
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   // Buttons
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
-  },
+  buttonRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
   cancelBtn: {
     flex: 1,
     paddingVertical: 16,
@@ -375,11 +374,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
     alignItems: 'center',
   },
-  cancelText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#6B7280',
-  },
+  cancelText: { fontSize: 16, fontWeight: '700', color: '#6B7280' },
   saveBtn: {
     flex: 1,
     paddingVertical: 16,
@@ -387,9 +382,5 @@ const styles = StyleSheet.create({
     backgroundColor: '#3B82F6',
     alignItems: 'center',
   },
-  saveText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: 'white',
-  },
+  saveText: { fontSize: 16, fontWeight: '700', color: 'white' },
 });
