@@ -13,31 +13,28 @@ interface ShiftInfoProps {
 
 function formatTime(isoString: string): string {
   const date = new Date(isoString);
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
-function getStatusLabel(status: TimerStatus): { label: string; icon: string } {
+function getStatusConfig(status: TimerStatus): { label: string; color: string; bg: string } {
   switch (status) {
     case 'waiting':
-      return { label: 'Upcoming Shift', icon: '\uD83D\uDD35' };
+      return { label: 'Upcoming', color: '#3B82F6', bg: '#EFF6FF' };
     case 'active':
-      return { label: 'Current Shift', icon: '\uD83D\uDFE2' };
+      return { label: 'Active', color: '#10B981', bg: '#ECFDF5' };
     case 'overtime':
-      return { label: 'Ending Soon', icon: '\uD83D\uDFE1' };
+      return { label: 'Ending Soon', color: '#F59E0B', bg: '#FFFBEB' };
     case 'alerting':
-      return { label: 'Overtime!', icon: '\uD83D\uDD34' };
+      return { label: 'Overtime', color: '#EF4444', bg: '#FEF2F2' };
     default:
-      return { label: '', icon: '' };
+      return { label: '', color: '#6B7280', bg: '#F3F4F6' };
   }
 }
 
-
 export function ShiftInfo({ shift, status, onClientPress }: ShiftInfoProps) {
   const db = useDatabase();
+  const { label: statusLabel, color: statusColor, bg: statusBg } = getStatusConfig(status);
 
-  const { label: statusLabel, icon: statusIcon } = getStatusLabel(status);
-
-  // Look up client data for additional info (medications, etc.)
   const client = db.getFirstSync<Client>(
     'SELECT * FROM clients WHERE name = ? LIMIT 1',
     [shift.clientName]
@@ -48,57 +45,56 @@ export function ShiftInfo({ shift, status, onClientPress }: ShiftInfoProps) {
 
   return (
     <Pressable
-      style={[styles.container, { borderColor: shiftColor }]}
+      style={[styles.container, { borderLeftColor: shiftColor }]}
       onPress={() => {
         if (client && onClientPress) {
           onClientPress(client);
         }
       }}
     >
-      {/* Status Badge */}
-      <View style={styles.header}>
-        <ThemedText style={styles.statusBadge}>
-          {statusIcon} {statusLabel}
-        </ThemedText>
+      {/* Top row: label + status badge */}
+      <View style={styles.topRow}>
+        <ThemedText style={styles.sectionLabel}>CURRENT SHIFT</ThemedText>
+        <View style={styles.rightGroup}>
+          <View style={[styles.statusBadge, { backgroundColor: statusBg }]}>
+            <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+            <ThemedText style={[styles.statusText, { color: statusColor }]}>
+              {statusLabel}
+            </ThemedText>
+          </View>
+          {client && (
+            <ThemedText style={styles.viewDetails}>View details</ThemedText>
+          )}
+        </View>
       </View>
 
-      {/* Client Name */}
+      {/* Client name */}
       <ThemedText style={styles.clientName}>{shift.clientName}</ThemedText>
 
-      {/* Time and Type */}
-      <View style={styles.infoGrid}>
-        <View style={styles.infoBox}>
-          <ThemedText style={styles.infoLabel}>Scheduled</ThemedText>
-          <ThemedText style={[styles.infoValue, { color: shiftColor }]}>
-            {formatTime(shift.startAt)} - {formatTime(shift.endAt)}
-          </ThemedText>
-        </View>
-        <View style={styles.infoBox}>
-          <ThemedText style={styles.infoLabel}>Type</ThemedText>
-          <ThemedText style={[styles.infoValue, { color: '#10B981' }]}>
-            {eventType}
-          </ThemedText>
-        </View>
-      </View>
+      {/* Description line */}
+      <ThemedText style={styles.description}>
+        {eventType} {client?.address ? `\u2022 ${client.address}` : ''}
+      </ThemedText>
 
-      {/* Notes */}
+      {/* Time range */}
+      <ThemedText style={styles.timeRange}>
+        {formatTime(shift.startAt)} \u2013 {formatTime(shift.endAt)}
+      </ThemedText>
+
+      {/* Next Action card */}
       {shift.notes ? (
-        <View style={styles.notesBox}>
-          <ThemedText style={styles.notesLabel}>{'\uD83D\uDCCB'} Notes</ThemedText>
-          <ThemedText style={styles.notesText}>{shift.notes}</ThemedText>
+        <View style={styles.nextAction}>
+          <ThemedText style={styles.nextActionLabel}>NEXT ACTION</ThemedText>
+          <ThemedText style={styles.nextActionText}>{shift.notes}</ThemedText>
+        </View>
+      ) : client?.medications ? (
+        <View style={styles.nextAction}>
+          <ThemedText style={styles.nextActionLabel}>NEXT ACTION</ThemedText>
+          <ThemedText style={styles.nextActionText}>
+            Medication reminder: {client.medications}
+          </ThemedText>
         </View>
       ) : null}
-
-      {/* Medications from client profile */}
-      {client?.medications ? (
-        <View style={styles.medsBox}>
-          <ThemedText style={styles.medsLabel}>{'\uD83D\uDC8A'} Medications</ThemedText>
-          <ThemedText style={styles.medsText}>{client.medications}</ThemedText>
-        </View>
-      ) : null}
-
-      {/* Tap hint */}
-      <ThemedText style={styles.tapHint}>Tap to view full client profile {'\u276F'}</ThemedText>
     </Pressable>
   );
 }
@@ -106,100 +102,89 @@ export function ShiftInfo({ shift, status, onClientPress }: ShiftInfoProps) {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: 'white',
-    borderRadius: 20,
-    borderWidth: 3,
-    padding: 24,
+    borderRadius: 16,
+    borderLeftWidth: 4,
+    padding: 20,
     marginHorizontal: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  header: {
+  topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
   },
-  statusBadge: {
-    fontSize: 13,
-    fontWeight: '700',
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '800',
     color: '#6B7280',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 1.2,
+  },
+  rightGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 6,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  viewDetails: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6B7280',
   },
   clientName: {
-    fontSize: 28,
-    fontWeight: '900',
+    fontSize: 24,
+    fontWeight: '800',
     color: '#1F2937',
-    marginBottom: 20,
+    marginBottom: 4,
   },
-  infoGrid: {
-    flexDirection: 'row',
-    gap: 12,
+  description: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 6,
+  },
+  timeRange: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1F2937',
     marginBottom: 16,
   },
-  infoBox: {
-    flex: 1,
+  nextAction: {
     backgroundColor: '#F9FAFB',
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
     padding: 14,
   },
-  infoLabel: {
+  nextActionLabel: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#6B7280',
-    textTransform: 'uppercase',
-    marginBottom: 4,
+    letterSpacing: 1,
+    marginBottom: 6,
   },
-  infoValue: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  notesBox: {
-    backgroundColor: '#FFFBEB',
-    borderWidth: 1,
-    borderColor: '#FEF3C7',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 12,
-  },
-  notesLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#92400E',
-    textTransform: 'uppercase',
-    marginBottom: 4,
-  },
-  notesText: {
+  nextActionText: {
     fontSize: 14,
-    color: '#78350F',
-  },
-  medsBox: {
-    backgroundColor: '#FAF5FF',
-    borderWidth: 1,
-    borderColor: '#E9D5FF',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 12,
-  },
-  medsLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#6B21A8',
-    textTransform: 'uppercase',
-    marginBottom: 4,
-  },
-  medsText: {
-    fontSize: 14,
-    color: '#581C87',
-  },
-  tapHint: {
-    textAlign: 'center',
-    fontSize: 12,
-    color: '#9CA3AF',
-    fontStyle: 'italic',
-    marginTop: 8,
+    color: '#374151',
+    lineHeight: 20,
   },
 });

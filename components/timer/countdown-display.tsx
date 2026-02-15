@@ -14,12 +14,20 @@ import { type TimerStatus } from '@/hooks/use-timer';
 interface CountdownDisplayProps {
   secondsRemaining: number;
   status: TimerStatus;
+  totalShiftSeconds?: number;
 }
 
-export function CountdownDisplay({ secondsRemaining, status }: CountdownDisplayProps) {
+function formatDuration(totalSeconds: number): string {
+  const abs = Math.abs(totalSeconds);
+  const h = Math.floor(abs / 3600);
+  const m = Math.floor((abs % 3600) / 60);
+  const s = abs % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+export function CountdownDisplay({ secondsRemaining, status, totalShiftSeconds }: CountdownDisplayProps) {
   const opacity = useSharedValue(1);
 
-  // Blink when alerting
   useEffect(() => {
     if (status === 'alerting') {
       opacity.value = withRepeat(withTiming(0.3, { duration: 500 }), -1, true);
@@ -34,84 +42,78 @@ export function CountdownDisplay({ secondsRemaining, status }: CountdownDisplayP
   }));
 
   const isNegative = secondsRemaining < 0;
-  const absSeconds = Math.abs(secondsRemaining);
-  const hours = Math.floor(absSeconds / 3600);
-  const minutes = Math.floor((absSeconds % 3600) / 60);
-  const seconds = absSeconds % 60;
+  const timeString = `${isNegative ? '-' : ''}${formatDuration(secondsRemaining)}`;
 
-  const timeString = `${isNegative ? '-' : ''}${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-
-  const isActive = status === 'active';
   const isOvertime = status === 'alerting' || isNegative;
   const isWarning = status === 'overtime' || (secondsRemaining > 0 && secondsRemaining <= 300);
 
-  const label = isActive || isWarning
-    ? '\u23F1\uFE0F TIME REMAINING'
-    : isOvertime
-    ? '\uD83D\uDEA8 OVERTIME'
-    : '\u23F0 STARTS IN';
+  const label = isOvertime
+    ? 'OVERTIME'
+    : (status === 'active' || isWarning)
+    ? 'TIME REMAINING'
+    : 'STARTS IN';
+
+  const timeColor = isOvertime
+    ? StatusColors.danger
+    : isWarning
+    ? StatusColors.warning
+    : '#1F2937';
 
   return (
     <View style={styles.container}>
-      <ThemedText style={styles.label}>{label}</ThemedText>
-      <Animated.Text
-        style={[
-          styles.time,
-          isOvertime && { color: StatusColors.danger },
-          isWarning && { color: StatusColors.warning },
-          animatedStyle,
-        ]}
-      >
+      <ThemedText style={[styles.label, isOvertime && { color: StatusColors.danger }]}>
+        {label}
+      </ThemedText>
+
+      <Animated.Text style={[styles.time, { color: timeColor }, animatedStyle]}>
         {timeString}
       </Animated.Text>
-      {isActive && !isWarning && !isOvertime && (
-        <View style={styles.activeBadge}>
-          <ThemedText style={styles.activeBadgeText}>{'\u2705'} Shift Active</ThemedText>
-        </View>
-      )}
+
+      {totalShiftSeconds ? (
+        <ThemedText style={styles.totalShift}>
+          Total shift: <ThemedText style={styles.totalShiftBold}>{formatDuration(totalShiftSeconds)}</ThemedText>
+        </ThemedText>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#1F2937',
-    borderRadius: 20,
-    padding: 32,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 28,
     marginHorizontal: 16,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 12,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: 'white',
-    textAlign: 'center',
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#6B7280',
+    letterSpacing: 1.5,
     marginBottom: 12,
   },
   time: {
-    fontSize: 56,
-    fontWeight: '900',
-    color: 'white',
+    fontSize: 52,
+    fontWeight: '800',
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     textAlign: 'center',
-    letterSpacing: -2,
+    letterSpacing: -1,
     fontVariant: ['tabular-nums'],
   },
-  activeBadge: {
-    backgroundColor: '#10B981',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    marginTop: 16,
+  totalShift: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    marginTop: 12,
   },
-  activeBadgeText: {
-    color: 'white',
-    fontSize: 16,
+  totalShiftBold: {
     fontWeight: '700',
+    color: '#6B7280',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
 });

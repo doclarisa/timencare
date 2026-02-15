@@ -1,8 +1,7 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { StyleSheet, ScrollView, RefreshControl, Image, Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useTimer } from '@/hooks/use-timer';
 import { useNotifications } from '@/hooks/use-notifications';
 import { CountdownDisplay } from '@/components/timer/countdown-display';
@@ -32,6 +31,14 @@ export default function TimerScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [profileClient, setProfileClient] = useState<Client | null>(null);
 
+  // Calculate total shift duration in seconds
+  const totalShiftSeconds = useMemo(() => {
+    if (!shift) return 0;
+    const start = new Date(shift.startAt).getTime();
+    const end = new Date(shift.endAt).getTime();
+    return Math.floor((end - start) / 1000);
+  }, [shift?.startAt, shift?.endAt]);
+
   // Schedule notifications when shift loads
   useEffect(() => {
     if (shift) {
@@ -56,18 +63,15 @@ export default function TimerScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <ThemedView style={styles.header}>
+        {/* Header */}
+        <View style={styles.header}>
           <Image
             source={require('@/assets/images/LOGOwebsite1.png')}
             style={styles.logo}
             resizeMode="contain"
           />
-          <ThemedText style={styles.tagline}>Shift Timer & Schedule</ThemedText>
-        </ThemedView>
-
-        <ThemedView style={styles.clockContainer}>
           <LiveClock />
-        </ThemedView>
+        </View>
 
         {!shift ? (
           <ThemedView style={styles.emptyState}>
@@ -79,20 +83,21 @@ export default function TimerScreen() {
             <Pressable
               style={styles.emptyButton}
               onPress={() => {
-                  const today = new Date().toISOString().split('T')[0];
-                  router.push(`/day/${today}`);
-                }}
+                const today = new Date().toISOString().split('T')[0];
+                router.push(`/day/${today}`);
+              }}
             >
               <ThemedText style={styles.emptyButtonText}>+ Add First Shift</ThemedText>
             </Pressable>
           </ThemedView>
         ) : (
-          <ThemedView style={styles.timerContent}>
+          <View style={styles.timerContent}>
             <ShiftInfo shift={shift} status={status} onClientPress={setProfileClient} />
 
             <CountdownDisplay
               secondsRemaining={secondsRemaining}
               status={status}
+              totalShiftSeconds={totalShiftSeconds}
             />
 
             <SessionControls
@@ -107,21 +112,7 @@ export default function TimerScreen() {
                 Clocked in at {new Date(session.clockInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </ThemedText>
             )}
-
-            {/* Quick Actions */}
-            <View style={styles.quickActions}>
-              <Pressable
-                style={styles.quickActionBlue}
-                onPress={() => {
-                  const today = new Date().toISOString().split('T')[0];
-                  router.push(`/day/${today}`);
-                }}
-              >
-                <IconSymbol name="calendar.badge.clock" size={24} color="white" />
-                <ThemedText style={styles.quickActionText}>Full Schedule</ThemedText>
-              </Pressable>
-            </View>
-          </ThemedView>
+          </View>
         )}
       </ScrollView>
 
@@ -134,16 +125,16 @@ export default function TimerScreen() {
         />
       )}
 
-      {/* Floating Add Event Button */}
+      {/* Floating Add Button */}
       <Pressable
-        style={styles.floatingButton}
+        style={styles.fab}
         onPress={() => {
-                  const today = new Date().toISOString().split('T')[0];
-                  router.push(`/day/${today}`);
-                }}
+          const today = new Date().toISOString().split('T')[0];
+          router.push(`/day/${today}`);
+        }}
       >
-        <IconSymbol name="plus.circle.fill" size={48} color="white" />
-        <ThemedText style={styles.floatingButtonText}>Add Event</ThemedText>
+        <ThemedText style={styles.fabPlus}>+</ThemedText>
+        <ThemedText style={styles.fabLabel}>Add</ThemedText>
       </Pressable>
     </SafeAreaView>
   );
@@ -155,33 +146,21 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 140,
+    paddingBottom: 100,
   },
   header: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.04)',
   },
   logo: {
-    width: 200,
-    height: 60,
-    marginBottom: 4,
-  },
-  tagline: {
-    fontSize: 12,
-    opacity: 0.5,
-    marginTop: 2,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  clockContainer: {
-    alignItems: 'center',
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
-    marginHorizontal: 16,
-    marginBottom: 16,
+    width: 160,
+    height: 44,
   },
   // Empty state
   emptyState: {
@@ -189,94 +168,72 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 32,
-    paddingVertical: 60,
+    paddingVertical: 80,
   },
   emptyIcon: {
-    fontSize: 64,
-    marginBottom: 20,
+    fontSize: 56,
+    marginBottom: 16,
   },
   emptyTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '700',
     color: '#4B5563',
-    marginBottom: 12,
+    marginBottom: 8,
     textAlign: 'center',
   },
   emptyBody: {
     textAlign: 'center',
-    fontSize: 16,
+    fontSize: 15,
     color: '#9CA3AF',
-    marginBottom: 28,
+    marginBottom: 24,
   },
   emptyButton: {
     backgroundColor: '#3B82F6',
-    paddingHorizontal: 28,
-    paddingVertical: 14,
-    borderRadius: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
   },
   emptyButtonText: {
     color: 'white',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
   },
   // Timer content
   timerContent: {
-    flex: 1,
-    gap: 20,
-    paddingTop: 8,
+    gap: 16,
+    paddingTop: 16,
   },
   clockedInAt: {
     textAlign: 'center',
-    opacity: 0.5,
-    fontSize: 14,
+    fontSize: 13,
+    color: '#9CA3AF',
   },
-  // Quick actions
-  quickActions: {
+  // FAB
+  fab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 20,
     flexDirection: 'row',
-    gap: 12,
-    paddingHorizontal: 16,
-  },
-  quickActionBlue: {
-    flex: 1,
-    backgroundColor: '#8B5CF6',
-    borderRadius: 16,
-    paddingVertical: 20,
     alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 10,
-    shadowColor: '#000',
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderRadius: 28,
+    gap: 6,
+    shadowColor: '#3B82F6',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 8,
   },
-  quickActionText: {
+  fabPlus: {
+    fontSize: 22,
+    fontWeight: '700',
     color: 'white',
+  },
+  fabLabel: {
     fontSize: 16,
     fontWeight: '700',
-  },
-  // Floating button
-  floatingButton: {
-    position: 'absolute',
-    right: 24,
-    bottom: 24,
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#3B82F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 12,
-  },
-  floatingButtonText: {
     color: 'white',
-    fontSize: 14,
-    fontWeight: '700',
-    marginTop: 4,
   },
 });

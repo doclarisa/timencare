@@ -1,7 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { ThemedText } from '@/components/themed-text';
-import { StatusColors } from '@/constants/theme';
 import { type TimerStatus } from '@/hooks/use-timer';
 
 interface SessionControlsProps {
@@ -26,28 +25,18 @@ export function SessionControls({
     return (
       <View style={styles.container}>
         <Pressable
-          style={({ pressed }) => [
-            styles.button,
-            { backgroundColor: StatusColors.warning },
-            pressed && styles.pressed,
-          ]}
+          style={({ pressed }) => [styles.btn, styles.btnWarning, pressed && styles.pressed]}
           onPress={() => handlePress(onAcknowledge)}
         >
-          <ThemedText style={styles.buttonText} lightColor="#fff" darkColor="#fff">
-            Dismiss Alert
-          </ThemedText>
+          <ThemedText style={styles.btnLabel}>Dismiss</ThemedText>
+          <ThemedText style={styles.btnSub}>Stop alert</ThemedText>
         </Pressable>
         <Pressable
-          style={({ pressed }) => [
-            styles.button,
-            { backgroundColor: StatusColors.danger },
-            pressed && styles.pressed,
-          ]}
+          style={({ pressed }) => [styles.btn, styles.btnDanger, pressed && styles.pressed]}
           onPress={() => handlePress(onClockOut)}
         >
-          <ThemedText style={styles.buttonText} lightColor="#fff" darkColor="#fff">
-            Clock Out
-          </ThemedText>
+          <ThemedText style={styles.btnLabel}>Clock Out</ThemedText>
+          <ThemedText style={styles.btnSub}>End shift</ThemedText>
         </Pressable>
       </View>
     );
@@ -57,17 +46,11 @@ export function SessionControls({
     return (
       <View style={styles.container}>
         <Pressable
-          style={({ pressed }) => [
-            styles.button,
-            styles.buttonLarge,
-            { backgroundColor: StatusColors.danger },
-            pressed && styles.pressed,
-          ]}
+          style={({ pressed }) => [styles.btn, styles.btnDanger, pressed && styles.pressed]}
           onPress={() => handlePress(onClockOut)}
         >
-          <ThemedText style={styles.buttonTextLarge} lightColor="#fff" darkColor="#fff">
-            Clock Out
-          </ThemedText>
+          <ThemedText style={styles.btnLabel}>Clock Out</ThemedText>
+          <ThemedText style={styles.btnSub}>End shift</ThemedText>
         </Pressable>
       </View>
     );
@@ -77,17 +60,11 @@ export function SessionControls({
     return (
       <View style={styles.container}>
         <Pressable
-          style={({ pressed }) => [
-            styles.button,
-            styles.buttonLarge,
-            { backgroundColor: StatusColors.success },
-            pressed && styles.pressed,
-          ]}
+          style={({ pressed }) => [styles.btn, styles.btnSuccess, pressed && styles.pressed]}
           onPress={() => handlePress(onClockIn)}
         >
-          <ThemedText style={styles.buttonTextLarge} lightColor="#fff" darkColor="#fff">
-            Clock In
-          </ThemedText>
+          <ThemedText style={styles.btnLabel}>Start</ThemedText>
+          <ThemedText style={styles.btnSub}>Clock in</ThemedText>
         </Pressable>
       </View>
     );
@@ -98,28 +75,39 @@ export function SessionControls({
 
 const styles = StyleSheet.create({
   container: {
+    flexDirection: 'row',
     gap: 12,
-    paddingHorizontal: 32,
-    width: '100%',
+    paddingHorizontal: 16,
   },
-  button: {
+  btn: {
+    flex: 1,
     paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  buttonLarge: {
-    paddingVertical: 20,
+  btnSuccess: {
+    backgroundColor: '#EF4444',
+  },
+  btnDanger: {
+    backgroundColor: '#1F2937',
+  },
+  btnWarning: {
+    backgroundColor: '#F59E0B',
   },
   pressed: {
-    opacity: 0.8,
-    transform: [{ scale: 0.98 }],
+    opacity: 0.85,
+    transform: [{ scale: 0.97 }],
   },
-  buttonText: {
+  btnLabel: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '800',
+    color: 'white',
   },
-  buttonTextLarge: {
-    fontSize: 22,
-    fontWeight: '700',
+  btnSub: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.7)',
+    marginTop: 2,
   },
 });
