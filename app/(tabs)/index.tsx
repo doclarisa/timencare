@@ -29,7 +29,7 @@ export default function TimerScreen() {
     refresh,
   } = useTimer();
   const { createEvent } = useEvents();
-  const { scheduleShiftReminders, cancelScheduled } = useNotifications();
+  const { scheduleShiftReminders } = useNotifications();
   const bgColor = useThemeColor({}, 'background');
   const [refreshing, setRefreshing] = useState(false);
   const [profileClient, setProfileClient] = useState<Client | null>(null);
@@ -38,13 +38,11 @@ export default function TimerScreen() {
   const today = new Date().toISOString().split('T')[0];
 
   // Schedule notifications when shift loads
+  // Do NOT cancel on unmount — notifications must persist when app is closed
   useEffect(() => {
     if (shift) {
       scheduleShiftReminders(shift);
     }
-    return () => {
-      cancelScheduled();
-    };
   }, [shift?.id]);
 
   const onRefresh = useCallback(() => {
