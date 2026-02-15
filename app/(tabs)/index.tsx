@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
-import { StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { StyleSheet, ScrollView, RefreshControl, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTimer } from '@/hooks/use-timer';
 import { useNotifications } from '@/hooks/use-notifications';
 import { CountdownDisplay } from '@/components/timer/countdown-display';
-import { SessionControls } from '@/components/timer/session-controls';
+import { SessionControls} from '@/components/timer/session-controls';
 import { ShiftInfo } from '@/components/timer/shift-info';
+import { LiveClock } from '@/components/live-clock';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
@@ -49,9 +50,18 @@ export default function TimerScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <ThemedText type="title" style={styles.header}>
-          Timer
-        </ThemedText>
+        <ThemedView style={styles.header}>
+          <Image
+            source={require('@/assets/images/timencare-logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <ThemedText style={styles.tagline}>Shift Timer & Schedule</ThemedText>
+        </ThemedView>
+
+        <ThemedView style={styles.clockContainer}>
+          <LiveClock />
+        </ThemedView>
 
         {!shift ? (
           <ThemedView style={styles.emptyState}>
@@ -103,7 +113,28 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 24,
+    paddingBottom: 8,
+    alignItems: 'center',
+  },
+  logo: {
+    width: 200,
+    height: 60,
+    marginBottom: 4,
+  },
+  tagline: {
+    fontSize: 12,
+    opacity: 0.5,
+    marginTop: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  clockContainer: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
+    marginHorizontal: 16,
+    marginBottom: 16,
   },
   emptyState: {
     flex: 1,
