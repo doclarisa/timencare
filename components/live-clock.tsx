@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 
 export function LiveClock() {
@@ -13,40 +13,38 @@ export function LiveClock() {
     return () => clearInterval(interval);
   }, []);
 
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    });
-  };
+  const timeStr = time.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString([], {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
+  const dateStr = time.toLocaleDateString([], {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
 
   return (
-    <>
-      <ThemedText style={styles.time}>{formatTime(time)}</ThemedText>
-      <ThemedText style={styles.date}>{formatDate(time)}</ThemedText>
-    </>
+    <View style={styles.container}>
+      <ThemedText style={styles.time}>{timeStr}</ThemedText>
+      <ThemedText style={styles.date}>{dateStr}</ThemedText>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    alignItems: 'flex-end',
+  },
   time: {
-    fontSize: 48,
-    fontWeight: '200',
-    letterSpacing: 1,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F2937',
     fontVariant: ['tabular-nums'],
   },
   date: {
-    fontSize: 14,
-    opacity: 0.6,
-    marginTop: 4,
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
   },
 });
