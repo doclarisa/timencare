@@ -1,5 +1,6 @@
 import { openDatabaseSync, type SQLiteDatabase } from 'expo-sqlite';
 import { randomUUID } from 'expo-crypto';
+import { seedSampleData } from './seed-data';
 
 // --- Types ---
 
@@ -65,6 +66,7 @@ function runMigrations(db: SQLiteDatabase): void {
 export function openDatabase(): SQLiteDatabase {
   const db = openDatabaseSync('timencare.db');
   runMigrations(db);
+  seedSampleData(db);
   return db;
 }
 
