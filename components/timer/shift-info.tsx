@@ -1,10 +1,9 @@
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, Pressable, Alert } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { EventColors, StatusColors } from '@/constants/theme';
-import { useThemeColor } from '@/hooks/use-theme-color';
-import { type CalendarEvent } from '@/lib/database';
+import { EventColors } from '@/constants/theme';
+import { type CalendarEvent, type Client } from '@/lib/database';
 import { type TimerStatus } from '@/hooks/use-timer';
+import { useDatabase } from '@/contexts/database-context';
 
 interface ShiftInfoProps {
   shift: CalendarEvent;
@@ -16,104 +15,191 @@ function formatTime(isoString: string): string {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-function getStatusLabel(status: TimerStatus): string {
+function getStatusLabel(status: TimerStatus): { label: string; icon: string } {
   switch (status) {
     case 'waiting':
-      return 'Ready';
+      return { label: 'Upcoming Shift', icon: '\uD83D\uDD35' };
     case 'active':
-      return 'In Progress';
+      return { label: 'Current Shift', icon: '\uD83D\uDFE2' };
     case 'overtime':
-      return 'Ending Soon';
+      return { label: 'Ending Soon', icon: '\uD83D\uDFE1' };
     case 'alerting':
-      return 'Overtime!';
+      return { label: 'Overtime!', icon: '\uD83D\uDD34' };
     default:
-      return '';
+      return { label: '', icon: '' };
   }
 }
 
-function getStatusColor(status: TimerStatus): string {
-  switch (status) {
-    case 'waiting':
-      return StatusColors.info;
-    case 'active':
-      return StatusColors.success;
-    case 'overtime':
-      return StatusColors.warning;
-    case 'alerting':
-      return StatusColors.danger;
-    default:
-      return StatusColors.info;
-  }
-}
 
 export function ShiftInfo({ shift, status }: ShiftInfoProps) {
-  const borderColor = useThemeColor({}, 'icon');
+  const db = useDatabase();
 
-  const statusLabel = getStatusLabel(status);
-  const statusColor = getStatusColor(status);
+  const { label: statusLabel, icon: statusIcon } = getStatusLabel(status);
+
+  // Look up client data for additional info (medications, etc.)
+  const client = db.getFirstSync<Client>(
+    'SELECT * FROM clients WHERE name = ? LIMIT 1',
+    [shift.clientName]
+  );
+
+  const shiftColor = shift.colorHex || EventColors.WORK;
+  const eventType = shift.type === 'WORK' ? 'Work' : shift.type === 'MEDS' ? 'Medication' : 'Other';
 
   return (
-    <ThemedView style={[styles.container, { borderColor: borderColor + '30' }]}>
-      <View style={[styles.colorStripe, { backgroundColor: shift.colorHex || EventColors.WORK }]} />
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <ThemedText style={styles.clientName} numberOfLines={1}>
-            {shift.clientName}
-          </ThemedText>
-          {statusLabel ? (
-            <View style={[styles.badge, { backgroundColor: statusColor + '20' }]}>
-              <ThemedText style={[styles.badgeText, { color: statusColor }]}>
-                {statusLabel}
-              </ThemedText>
-            </View>
-          ) : null}
-        </View>
-        <ThemedText style={styles.timeRange}>
-          {formatTime(shift.startAt)} — {formatTime(shift.endAt)}
+    <Pressable
+      style={[styles.container, { borderColor: shiftColor }]}
+      onPress={() => {
+        const info = client
+          ? `${client.name}\n\nPhone: ${client.phone || 'N/A'}\nAddress: ${client.address || 'N/A'}\n\nEmergency: ${client.emergencyContact || 'N/A'}`
+          : `${shift.clientName}\n\nNo client profile found.`;
+        Alert.alert('Client Profile', info);
+      }}
+    >
+      {/* Status Badge */}
+      <View style={styles.header}>
+        <ThemedText style={styles.statusBadge}>
+          {statusIcon} {statusLabel}
         </ThemedText>
       </View>
-    </ThemedView>
+
+      {/* Client Name */}
+      <ThemedText style={styles.clientName}>{shift.clientName}</ThemedText>
+
+      {/* Time and Type */}
+      <View style={styles.infoGrid}>
+        <View style={styles.infoBox}>
+          <ThemedText style={styles.infoLabel}>Scheduled</ThemedText>
+          <ThemedText style={[styles.infoValue, { color: shiftColor }]}>
+            {formatTime(shift.startAt)} - {formatTime(shift.endAt)}
+          </ThemedText>
+        </View>
+        <View style={styles.infoBox}>
+          <ThemedText style={styles.infoLabel}>Type</ThemedText>
+          <ThemedText style={[styles.infoValue, { color: '#10B981' }]}>
+            {eventType}
+          </ThemedText>
+        </View>
+      </View>
+
+      {/* Notes */}
+      {shift.notes ? (
+        <View style={styles.notesBox}>
+          <ThemedText style={styles.notesLabel}>{'\uD83D\uDCCB'} Notes</ThemedText>
+          <ThemedText style={styles.notesText}>{shift.notes}</ThemedText>
+        </View>
+      ) : null}
+
+      {/* Medications from client profile */}
+      {client?.medications ? (
+        <View style={styles.medsBox}>
+          <ThemedText style={styles.medsLabel}>{'\uD83D\uDC8A'} Medications</ThemedText>
+          <ThemedText style={styles.medsText}>{client.medications}</ThemedText>
+        </View>
+      ) : null}
+
+      {/* Tap hint */}
+      <ThemedText style={styles.tapHint}>Tap to view full client profile {'\u276F'}</ThemedText>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    borderRadius: 12,
-    borderWidth: 1,
-    overflow: 'hidden',
+    backgroundColor: 'white',
+    borderRadius: 20,
+    borderWidth: 3,
+    padding: 24,
     marginHorizontal: 16,
-  },
-  colorStripe: {
-    width: 5,
-  },
-  content: {
-    flex: 1,
-    padding: 16,
-    gap: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 8,
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 8,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  statusBadge: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#6B7280',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   clientName: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#1F2937',
+    marginBottom: 20,
+  },
+  infoGrid: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  infoBox: {
     flex: 1,
-  },
-  badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    backgroundColor: '#F9FAFB',
     borderRadius: 12,
+    padding: 14,
   },
-  badgeText: {
-    fontSize: 13,
-    fontWeight: '600',
+  infoLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#6B7280',
+    textTransform: 'uppercase',
+    marginBottom: 4,
   },
-  timeRange: {
+  infoValue: {
     fontSize: 16,
-    opacity: 0.7,
+    fontWeight: '700',
+  },
+  notesBox: {
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FEF3C7',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+  },
+  notesLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#92400E',
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  notesText: {
+    fontSize: 14,
+    color: '#78350F',
+  },
+  medsBox: {
+    backgroundColor: '#FAF5FF',
+    borderWidth: 1,
+    borderColor: '#E9D5FF',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+  },
+  medsLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#6B21A8',
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  medsText: {
+    fontSize: 14,
+    color: '#581C87',
+  },
+  tapHint: {
+    textAlign: 'center',
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontStyle: 'italic',
+    marginTop: 8,
   },
 });

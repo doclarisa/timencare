@@ -1,12 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
-import { StyleSheet, ScrollView, RefreshControl, Image, Pressable } from 'react-native';
+import { StyleSheet, ScrollView, RefreshControl, Image, Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useTimer } from '@/hooks/use-timer';
 import { useNotifications } from '@/hooks/use-notifications';
 import { CountdownDisplay } from '@/components/timer/countdown-display';
-import { SessionControls} from '@/components/timer/session-controls';
+import { SessionControls } from '@/components/timer/session-controls';
 import { ShiftInfo } from '@/components/timer/shift-info';
 import { LiveClock } from '@/components/live-clock';
 import { ThemedText } from '@/components/themed-text';
@@ -68,36 +68,50 @@ export default function TimerScreen() {
 
         {!shift ? (
           <ThemedView style={styles.emptyState}>
-            <ThemedText style={styles.emptyIcon}>
-              {'\u23F0'}
-            </ThemedText>
-            <ThemedText type="subtitle" style={styles.emptyTitle}>
-              No Shift Scheduled
-            </ThemedText>
+            <ThemedText style={styles.emptyIcon}>{'\uD83D\uDCC5'}</ThemedText>
+            <ThemedText style={styles.emptyTitle}>No Shifts Today</ThemedText>
             <ThemedText style={styles.emptyBody}>
-              Add a WORK event for today in the Schedule tab to start tracking time.
+              Add a shift to get started
             </ThemedText>
+            <Pressable
+              style={styles.emptyButton}
+              onPress={() => router.push('/calendar')}
+            >
+              <ThemedText style={styles.emptyButtonText}>+ Add First Shift</ThemedText>
+            </Pressable>
           </ThemedView>
         ) : (
           <ThemedView style={styles.timerContent}>
             <ShiftInfo shift={shift} status={status} />
-            {session && (
-              <CountdownDisplay
-                secondsRemaining={secondsRemaining}
-                status={status}
-              />
-            )}
+
+            <CountdownDisplay
+              secondsRemaining={secondsRemaining}
+              status={status}
+            />
+
             <SessionControls
               status={status}
               onClockIn={clockIn}
               onClockOut={clockOut}
               onAcknowledge={acknowledge}
             />
+
             {session && (
               <ThemedText style={styles.clockedInAt}>
                 Clocked in at {new Date(session.clockInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </ThemedText>
             )}
+
+            {/* Quick Actions */}
+            <View style={styles.quickActions}>
+              <Pressable
+                style={styles.quickActionBlue}
+                onPress={() => router.push('/calendar')}
+              >
+                <IconSymbol name="calendar.badge.clock" size={24} color="white" />
+                <ThemedText style={styles.quickActionText}>Full Schedule</ThemedText>
+              </Pressable>
+            </View>
           </ThemedView>
         )}
       </ScrollView>
@@ -120,7 +134,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 32,
+    paddingBottom: 140,
   },
   header: {
     paddingHorizontal: 16,
@@ -148,29 +162,46 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginBottom: 16,
   },
+  // Empty state
   emptyState: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 32,
-    gap: 12,
+    paddingVertical: 60,
   },
   emptyIcon: {
     fontSize: 64,
-    marginBottom: 8,
+    marginBottom: 20,
   },
   emptyTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#4B5563',
+    marginBottom: 12,
     textAlign: 'center',
   },
   emptyBody: {
     textAlign: 'center',
-    opacity: 0.6,
     fontSize: 16,
-    lineHeight: 22,
+    color: '#9CA3AF',
+    marginBottom: 28,
   },
+  emptyButton: {
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 16,
+  },
+  emptyButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  // Timer content
   timerContent: {
     flex: 1,
-    gap: 24,
+    gap: 20,
     paddingTop: 8,
   },
   clockedInAt: {
@@ -178,6 +209,33 @@ const styles = StyleSheet.create({
     opacity: 0.5,
     fontSize: 14,
   },
+  // Quick actions
+  quickActions: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 16,
+  },
+  quickActionBlue: {
+    flex: 1,
+    backgroundColor: '#8B5CF6',
+    borderRadius: 16,
+    paddingVertical: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  quickActionText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  // Floating button
   floatingButton: {
     position: 'absolute',
     right: 24,
