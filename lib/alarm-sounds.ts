@@ -1,5 +1,12 @@
-import { Audio } from 'expo-av';
 import * as SecureStore from 'expo-secure-store';
+
+// Lazy-load expo-av to avoid crash if native module isn't available
+let Audio: typeof import('expo-av').Audio | null = null;
+try {
+  Audio = require('expo-av').Audio;
+} catch (err) {
+  console.warn('expo-av not available, alarm sounds will use vibration only:', err);
+}
 
 const SOUND_KEY = 'alarm_sound';
 const VOLUME_KEY = 'alarm_volume';
@@ -230,12 +237,17 @@ const SOUND_GENERATORS: Record<AlarmSoundId, () => string> = {
 };
 
 // Cached sound objects
-let currentSound: Audio.Sound | null = null;
+let currentSound: any = null;
 let loopInterval: ReturnType<typeof setInterval> | null = null;
 
 /** Play a specific alarm sound, looping until stopped */
 export async function playAlarm(soundId: AlarmSoundId, volume = 1.0): Promise<void> {
   await stopAlarm();
+
+  if (!Audio) {
+    console.warn('expo-av not available, skipping alarm sound');
+    return;
+  }
 
   try {
     await Audio.setAudioModeAsync({
@@ -292,6 +304,11 @@ export async function stopAlarm(): Promise<void> {
 export async function previewAlarm(soundId: AlarmSoundId, volume = 1.0): Promise<void> {
   await stopAlarm();
 
+  if (!Audio) {
+    console.warn('expo-av not available, skipping alarm preview');
+    return;
+  }
+
   try {
     await Audio.setAudioModeAsync({
       allowsRecordingIOS: false,
@@ -310,8 +327,8 @@ export async function previewAlarm(soundId: AlarmSoundId, volume = 1.0): Promise
     await sound.playAsync();
 
     // Auto-cleanup after playback
-    sound.setOnPlaybackStatusUpdate((status) => {
-      if ('didJustFinish' in status && status.didJustFinish) {
+    sound.setOnPlaybackStatusUpdate((status: any) => {
+      if (status.didJustFinish) {
         sound.unloadAsync();
         if (currentSound === sound) currentSound = null;
       }
