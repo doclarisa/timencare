@@ -1,4 +1,4 @@
-import { StyleSheet, View, Pressable, Alert } from 'react-native';
+import { StyleSheet, View, Pressable } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { EventColors } from '@/constants/theme';
 import { type CalendarEvent, type Client } from '@/lib/database';
@@ -8,6 +8,7 @@ import { useDatabase } from '@/contexts/database-context';
 interface ShiftInfoProps {
   shift: CalendarEvent;
   status: TimerStatus;
+  onClientPress?: (client: Client) => void;
 }
 
 function formatTime(isoString: string): string {
@@ -31,7 +32,7 @@ function getStatusLabel(status: TimerStatus): { label: string; icon: string } {
 }
 
 
-export function ShiftInfo({ shift, status }: ShiftInfoProps) {
+export function ShiftInfo({ shift, status, onClientPress }: ShiftInfoProps) {
   const db = useDatabase();
 
   const { label: statusLabel, icon: statusIcon } = getStatusLabel(status);
@@ -49,10 +50,9 @@ export function ShiftInfo({ shift, status }: ShiftInfoProps) {
     <Pressable
       style={[styles.container, { borderColor: shiftColor }]}
       onPress={() => {
-        const info = client
-          ? `${client.name}\n\nPhone: ${client.phone || 'N/A'}\nAddress: ${client.address || 'N/A'}\n\nEmergency: ${client.emergencyContact || 'N/A'}`
-          : `${shift.clientName}\n\nNo client profile found.`;
-        Alert.alert('Client Profile', info);
+        if (client && onClientPress) {
+          onClientPress(client);
+        }
       }}
     >
       {/* Status Badge */}

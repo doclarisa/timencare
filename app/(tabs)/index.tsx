@@ -9,9 +9,11 @@ import { CountdownDisplay } from '@/components/timer/countdown-display';
 import { SessionControls } from '@/components/timer/session-controls';
 import { ShiftInfo } from '@/components/timer/shift-info';
 import { LiveClock } from '@/components/live-clock';
+import { ClientProfileModal } from '@/components/client-profile-modal';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { type Client } from '@/lib/database';
 
 export default function TimerScreen() {
   const router = useRouter();
@@ -28,6 +30,7 @@ export default function TimerScreen() {
   const { scheduleShiftReminders, cancelScheduled } = useNotifications();
   const bgColor = useThemeColor({}, 'background');
   const [refreshing, setRefreshing] = useState(false);
+  const [profileClient, setProfileClient] = useState<Client | null>(null);
 
   // Schedule notifications when shift loads
   useEffect(() => {
@@ -75,14 +78,17 @@ export default function TimerScreen() {
             </ThemedText>
             <Pressable
               style={styles.emptyButton}
-              onPress={() => router.push('/calendar')}
+              onPress={() => {
+                  const today = new Date().toISOString().split('T')[0];
+                  router.push(`/day/${today}`);
+                }}
             >
               <ThemedText style={styles.emptyButtonText}>+ Add First Shift</ThemedText>
             </Pressable>
           </ThemedView>
         ) : (
           <ThemedView style={styles.timerContent}>
-            <ShiftInfo shift={shift} status={status} />
+            <ShiftInfo shift={shift} status={status} onClientPress={setProfileClient} />
 
             <CountdownDisplay
               secondsRemaining={secondsRemaining}
@@ -106,7 +112,10 @@ export default function TimerScreen() {
             <View style={styles.quickActions}>
               <Pressable
                 style={styles.quickActionBlue}
-                onPress={() => router.push('/calendar')}
+                onPress={() => {
+                  const today = new Date().toISOString().split('T')[0];
+                  router.push(`/day/${today}`);
+                }}
               >
                 <IconSymbol name="calendar.badge.clock" size={24} color="white" />
                 <ThemedText style={styles.quickActionText}>Full Schedule</ThemedText>
@@ -116,10 +125,22 @@ export default function TimerScreen() {
         )}
       </ScrollView>
 
+      {/* Client Profile Modal */}
+      {profileClient && (
+        <ClientProfileModal
+          visible={!!profileClient}
+          client={profileClient}
+          onClose={() => setProfileClient(null)}
+        />
+      )}
+
       {/* Floating Add Event Button */}
       <Pressable
         style={styles.floatingButton}
-        onPress={() => router.push('/calendar')}
+        onPress={() => {
+                  const today = new Date().toISOString().split('T')[0];
+                  router.push(`/day/${today}`);
+                }}
       >
         <IconSymbol name="plus.circle.fill" size={48} color="white" />
         <ThemedText style={styles.floatingButtonText}>Add Event</ThemedText>
