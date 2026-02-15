@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { StyleSheet, View, Pressable } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { type CalendarEvent, type Client } from '@/lib/database';
@@ -27,11 +28,19 @@ function getStatusLabel(status: TimerStatus): string {
 
 export function ShiftInfo({ shift, status, onClientPress }: ShiftInfoProps) {
   const db = useDatabase();
+  const [client, setClient] = useState<Client | null>(null);
 
-  const client = db.getFirstSync<Client>(
-    'SELECT * FROM clients WHERE name = ? LIMIT 1',
-    [shift.clientName]
-  );
+  useEffect(() => {
+    try {
+      const result = db.getFirstSync<Client>(
+        'SELECT * FROM clients WHERE name = ? LIMIT 1',
+        [shift.clientName]
+      );
+      setClient(result ?? null);
+    } catch {
+      setClient(null);
+    }
+  }, [db, shift.clientName]);
 
   const eventType = shift.type === 'WORK'
     ? 'Home Care Visit'

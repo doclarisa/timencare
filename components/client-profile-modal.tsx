@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { StyleSheet, Modal, View, ScrollView, Pressable, TextInput } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { useDatabase } from '@/contexts/database-context';
@@ -30,10 +30,18 @@ export function ClientProfileModal({ visible, client, onClose }: ClientProfileMo
   const [editData, setEditData] = useState({ ...client });
 
   // Get upcoming shifts for this client
-  const shifts = db.getAllSync<CalendarEvent>(
-    `SELECT * FROM events WHERE clientName = ? ORDER BY startAt ASC LIMIT 5`,
-    [client.name]
-  );
+  const [shifts, setShifts] = useState<CalendarEvent[]>([]);
+  useEffect(() => {
+    try {
+      const result = db.getAllSync<CalendarEvent>(
+        `SELECT * FROM events WHERE clientName = ? ORDER BY startAt ASC LIMIT 5`,
+        [client.name]
+      );
+      setShifts(result);
+    } catch {
+      setShifts([]);
+    }
+  }, [db, client.name]);
 
   const handleSave = () => {
     const now = new Date().toISOString();
