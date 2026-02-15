@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -8,6 +9,7 @@ import 'react-native-reanimated';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/contexts/auth-context';
 import { DatabaseProvider } from '@/contexts/database-context';
+import { requestNotificationPermissions } from '@/lib/notifications';
 
 // Configure notification handler so notifications show when app is foregrounded
 Notifications.setNotificationHandler({
@@ -23,6 +25,11 @@ Notifications.setNotificationHandler({
 function RootLayoutNav() {
   const { isAuthenticated, isLoading } = useAuth();
   const colorScheme = useColorScheme();
+
+  // Request notification permissions on app start
+  useEffect(() => {
+    requestNotificationPermissions();
+  }, []);
 
   if (isLoading) {
     return (

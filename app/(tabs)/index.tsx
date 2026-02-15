@@ -1,21 +1,21 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { StyleSheet, ScrollView, RefreshControl, Image, Pressable, View } from 'react-native';
+import { StyleSheet, ScrollView, RefreshControl, Image, Pressable, View, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 import { useTimer } from '@/hooks/use-timer';
+import { useEvents } from '@/hooks/use-events';
 import { useNotifications } from '@/hooks/use-notifications';
 import { CountdownDisplay } from '@/components/timer/countdown-display';
 import { SessionControls } from '@/components/timer/session-controls';
 import { ShiftInfo } from '@/components/timer/shift-info';
 import { LiveClock } from '@/components/live-clock';
 import { ClientProfileModal } from '@/components/client-profile-modal';
+import { EventForm, type EventFormData } from '@/components/calendar/event-form';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { type Client } from '@/lib/database';
 
 export default function TimerScreen() {
-  const router = useRouter();
   const {
     shift,
     secondsRemaining,
@@ -25,10 +25,14 @@ export default function TimerScreen() {
     acknowledge,
     refresh,
   } = useTimer();
+  const { createEvent } = useEvents();
   const { scheduleShiftReminders, cancelScheduled } = useNotifications();
   const bgColor = useThemeColor({}, 'background');
   const [refreshing, setRefreshing] = useState(false);
   const [profileClient, setProfileClient] = useState<Client | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+
+  const today = new Date().toISOString().split('T')[0];
 
   // Calculate total shift duration in seconds
   const totalShiftSeconds = useMemo(() => {
@@ -53,6 +57,16 @@ export default function TimerScreen() {
     refresh();
     setRefreshing(false);
   }, [refresh]);
+
+  const handleSaveEvent = async (data: EventFormData) => {
+    const newEvent = createEvent(data);
+    setShowAddForm(false);
+    refresh(); // Reload timer to pick up new shift
+    // Schedule notifications for the new event
+    if (newEvent) {
+      await scheduleShiftReminders(newEvent);
+    }
+  };
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: bgColor }]} edges={['top']}>
@@ -115,13 +129,26 @@ export default function TimerScreen() {
         />
       )}
 
-      {/* Floating Add Button — above tab bar */}
+      {/* Add Event Form Modal — opens directly */}
+      <Modal
+        visible={showAddForm}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <SafeAreaView style={[styles.modalSafe, { backgroundColor: bgColor }]}>
+          <ThemedText style={styles.modalTitle}>New Event</ThemedText>
+          <EventForm
+            initialDate={today}
+            onSave={handleSaveEvent}
+            onCancel={() => setShowAddForm(false)}
+          />
+        </SafeAreaView>
+      </Modal>
+
+      {/* Floating Add Button — opens form directly */}
       <Pressable
         style={styles.fab}
-        onPress={() => {
-          const today = new Date().toISOString().split('T')[0];
-          router.push(`/day/${today}`);
-        }}
+        onPress={() => setShowAddForm(true)}
       >
         <ThemedText style={styles.fabPlus}>+</ThemedText>
         <ThemedText style={styles.fabLabel}>Add</ThemedText>
@@ -182,7 +209,7 @@ const styles = StyleSheet.create({
     gap: 20,
     paddingTop: 20,
   },
-  // Time Remaining card (wraps countdown + controls)
+  // Time Remaining card
   timeCard: {
     backgroundColor: 'white',
     borderRadius: 24,
@@ -194,7 +221,18 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  // FAB — positioned above tab navigation
+  // Modal
+  modalSafe: {
+    flex: 1,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  // FAB
   fab: {
     position: 'absolute',
     right: 20,
