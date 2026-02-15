@@ -124,36 +124,46 @@ export function MonthGrid({
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 8,
+    paddingTop: 8,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 8,
-    paddingVertical: 12,
+    paddingVertical: 16,
   },
   navButton: {
-    padding: 8,
+    padding: 10,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
   },
   navArrow: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
   },
   monthTitle: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1F2937',
   },
   weekdayRow: {
     flexDirection: 'row',
-    paddingBottom: 4,
+    paddingBottom: 8,
+    marginBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
   weekdayCell: {
     flex: 1,
     alignItems: 'center',
+    paddingVertical: 6,
   },
   weekdayText: {
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   row: {
     flexDirection: 'row',
