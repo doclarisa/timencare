@@ -1,6 +1,5 @@
-import { Tabs, useRouter } from 'expo-router';
+import { Tabs } from 'expo-router';
 import React from 'react';
-import { Pressable } from 'react-native';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -9,7 +8,6 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  const router = useRouter();
 
   return (
     <Tabs
@@ -17,18 +15,6 @@ export default function TabLayout() {
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: true,
         tabBarButton: HapticTab,
-        headerRight: () => (
-          <Pressable
-            onPress={() => router.push('/settings')}
-            style={{ marginRight: 16 }}
-          >
-            <IconSymbol
-              name="gearshape.fill"
-              size={24}
-              color={Colors[colorScheme ?? 'light'].icon}
-            />
-          </Pressable>
-        ),
       }}>
       <Tabs.Screen
         name="index"
@@ -46,6 +32,15 @@ export default function TabLayout() {
           headerShown: false,
           tabBarActiveTintColor: '#3B82F6',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="calendar.badge.clock" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="tools"
+        options={{
+          title: 'Tools',
+          headerShown: false,
+          tabBarActiveTintColor: '#10B981',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="wrench.fill" color={color} />,
         }}
       />
       {/* Hide the old explore tab from navigation */}

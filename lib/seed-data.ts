@@ -2,28 +2,73 @@ import { type SQLiteDatabase } from 'expo-sqlite';
 import { randomUUID } from 'expo-crypto';
 
 /**
- * Seeds the database with sample shifts for testing
- * Only runs if the database is empty
+ * Seeds the database with sample events and clients for testing.
+ * Only runs if the database is empty.
  */
 export function seedSampleData(db: SQLiteDatabase): void {
   // Check if we already have events
-  const existing = db.getFirstSync<{ count: number }>(
+  const existingEvents = db.getFirstSync<{ count: number }>(
     'SELECT COUNT(*) as count FROM events'
   );
-
-  if (existing && existing.count > 0) {
-    // Already have data, don't seed
-    return;
-  }
 
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  // Sample shift 1: Today, 9 AM - 5 PM
-  const shift1Start = new Date(today);
-  shift1Start.setHours(9, 0, 0, 0);
-  const shift1End = new Date(today);
-  shift1End.setHours(17, 0, 0, 0);
+  // Seed clients if table is empty
+  const existingClients = db.getFirstSync<{ count: number }>(
+    'SELECT COUNT(*) as count FROM clients'
+  );
+
+  if (!existingClients || existingClients.count === 0) {
+    // Client 1: Sarah Johnson
+    db.runSync(
+      `INSERT INTO clients (id, name, colorHex, phone, address, notes, medications, emergencyContact, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        randomUUID(),
+        'Sarah Johnson',
+        '#3B82F6',
+        '(555) 123-4567',
+        '123 Oak Street, Apt 4B',
+        'Prefers morning shifts. Allergic to penicillin.',
+        'Lisinopril 10mg - Morning\nMetformin 500mg - With meals',
+        'John Johnson (Son) - (555) 987-6543',
+        now.toISOString(),
+        now.toISOString(),
+      ]
+    );
+
+    // Client 2: Michael Chen
+    db.runSync(
+      `INSERT INTO clients (id, name, colorHex, phone, address, notes, medications, emergencyContact, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        randomUUID(),
+        'Michael Chen',
+        '#10B981',
+        '(555) 234-5678',
+        '456 Maple Avenue',
+        'Wheelchair accessible. Enjoys classical music.',
+        'Aspirin 81mg - Evening\nVitamin D - Daily',
+        'Lisa Chen (Daughter) - (555) 876-5432',
+        now.toISOString(),
+        now.toISOString(),
+      ]
+    );
+
+    console.log('✅ Sample clients seeded successfully');
+  }
+
+  if (existingEvents && existingEvents.count > 0) {
+    // Already have event data, don't seed
+    return;
+  }
+
+  // Event 1: Sarah Johnson - Today, 2 PM - 4 PM
+  const event1Start = new Date(today);
+  event1Start.setHours(14, 0, 0, 0);
+  const event1End = new Date(today);
+  event1End.setHours(16, 0, 0, 0);
 
   db.runSync(
     `INSERT INTO events (id, clientName, startAt, endAt, type, notes, colorHex, notifyEnabled, createdAt, updatedAt)
@@ -31,64 +76,64 @@ export function seedSampleData(db: SQLiteDatabase): void {
     [
       randomUUID(),
       'Sarah Johnson',
-      shift1Start.toISOString(),
-      shift1End.toISOString(),
+      event1Start.toISOString(),
+      event1End.toISOString(),
       'WORK',
-      'Regular shift - assisted living facility',
-      '#4A90D9', // Blue
+      'Reminder: Bring medication logs',
+      '#3B82F6',
       1,
       now.toISOString(),
       now.toISOString(),
     ]
   );
 
-  // Sample shift 2: Tomorrow, 10 AM - 6 PM
+  // Event 2: Michael Chen - Today, 5 PM - 7 PM
+  const event2Start = new Date(today);
+  event2Start.setHours(17, 0, 0, 0);
+  const event2End = new Date(today);
+  event2End.setHours(19, 0, 0, 0);
+
+  db.runSync(
+    `INSERT INTO events (id, clientName, startAt, endAt, type, notes, colorHex, notifyEnabled, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      randomUUID(),
+      'Michael Chen',
+      event2Start.toISOString(),
+      event2End.toISOString(),
+      'WORK',
+      '',
+      '#10B981',
+      1,
+      now.toISOString(),
+      now.toISOString(),
+    ]
+  );
+
+  // Event 3: Sarah Johnson - Tomorrow, 10 AM - 12 PM
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
-  const shift2Start = new Date(tomorrow);
-  shift2Start.setHours(10, 0, 0, 0);
-  const shift2End = new Date(tomorrow);
-  shift2End.setHours(18, 0, 0, 0);
+  const event3Start = new Date(tomorrow);
+  event3Start.setHours(10, 0, 0, 0);
+  const event3End = new Date(tomorrow);
+  event3End.setHours(12, 0, 0, 0);
 
   db.runSync(
     `INSERT INTO events (id, clientName, startAt, endAt, type, notes, colorHex, notifyEnabled, createdAt, updatedAt)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       randomUUID(),
-      'Robert Martinez',
-      shift2Start.toISOString(),
-      shift2End.toISOString(),
+      'Sarah Johnson',
+      event3Start.toISOString(),
+      event3End.toISOString(),
       'WORK',
-      'Home care visit - medication management',
-      '#7B68EE', // Purple
+      '',
+      '#3B82F6',
       1,
       now.toISOString(),
       now.toISOString(),
     ]
   );
 
-  // Sample medication reminder: Today, 2 PM
-  const medsTime = new Date(today);
-  medsTime.setHours(14, 0, 0, 0);
-  const medsEndTime = new Date(medsTime);
-  medsEndTime.setMinutes(15);
-
-  db.runSync(
-    `INSERT INTO events (id, clientName, startAt, endAt, type, notes, colorHex, notifyEnabled, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      randomUUID(),
-      'Mary Williams - Insulin',
-      medsTime.toISOString(),
-      medsEndTime.toISOString(),
-      'MEDS',
-      'Afternoon insulin dose',
-      '#E8833A', // Orange
-      1,
-      now.toISOString(),
-      now.toISOString(),
-    ]
-  );
-
-  console.log('✅ Sample data seeded successfully');
+  console.log('✅ Sample events seeded successfully');
 }

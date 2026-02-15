@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
-import { StyleSheet, ScrollView, RefreshControl, Image } from 'react-native';
+import { StyleSheet, ScrollView, RefreshControl, Image, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useTimer } from '@/hooks/use-timer';
 import { useNotifications } from '@/hooks/use-notifications';
 import { CountdownDisplay } from '@/components/timer/countdown-display';
@@ -12,6 +14,7 @@ import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 
 export default function TimerScreen() {
+  const router = useRouter();
   const {
     shift,
     session,
@@ -72,7 +75,7 @@ export default function TimerScreen() {
               No Shift Scheduled
             </ThemedText>
             <ThemedText style={styles.emptyBody}>
-              Add a WORK event for today in the Calendar tab to start tracking time.
+              Add a WORK event for today in the Schedule tab to start tracking time.
             </ThemedText>
           </ThemedView>
         ) : (
@@ -98,6 +101,15 @@ export default function TimerScreen() {
           </ThemedView>
         )}
       </ScrollView>
+
+      {/* Floating Add Event Button */}
+      <Pressable
+        style={styles.floatingButton}
+        onPress={() => router.push('/calendar')}
+      >
+        <IconSymbol name="plus.circle.fill" size={48} color="white" />
+        <ThemedText style={styles.floatingButtonText}>Add Event</ThemedText>
+      </Pressable>
     </SafeAreaView>
   );
 }
@@ -165,5 +177,27 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     opacity: 0.5,
     fontSize: 14,
+  },
+  floatingButton: {
+    position: 'absolute',
+    right: 24,
+    bottom: 24,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#3B82F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  floatingButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '700',
+    marginTop: 4,
   },
 });

@@ -19,6 +19,19 @@ export interface CalendarEvent {
   updatedAt: string;
 }
 
+export interface Client {
+  id: string;
+  name: string;
+  colorHex: string;
+  phone: string | null;
+  address: string | null;
+  notes: string | null;
+  medications: string | null;
+  emergencyContact: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Session {
   id: string;
   eventId: string;
@@ -59,6 +72,25 @@ function runMigrations(db: SQLiteDatabase): void {
       );
 
       PRAGMA user_version = 1;
+    `);
+  }
+
+  if (currentVersion < 2) {
+    db.execSync(`
+      CREATE TABLE IF NOT EXISTS clients (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        colorHex TEXT NOT NULL DEFAULT '#3B82F6',
+        phone TEXT,
+        address TEXT,
+        notes TEXT,
+        medications TEXT,
+        emergencyContact TEXT,
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT NOT NULL
+      );
+
+      PRAGMA user_version = 2;
     `);
   }
 }
