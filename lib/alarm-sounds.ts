@@ -1,4 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
+import * as FileSystem from 'expo-file-system';
 
 // Lazy-load expo-av to avoid crash if native module isn't available
 let Audio: typeof import('expo-av').Audio | null = null;
@@ -103,11 +104,10 @@ function uint8ToBase64(bytes: Uint8Array): string {
 
 /** Generate multi-tone sequences for different alarm sounds */
 function generateChimeWav(): string {
-  // Two ascending tones: C5 then E5
   const sr = 22050;
-  const tone1 = generateToneSamples(523.25, 300, sr, 'sine'); // C5
+  const tone1 = generateToneSamples(523.25, 300, sr, 'sine');
   const silence = new Float32Array(Math.floor(sr * 0.05));
-  const tone2 = generateToneSamples(659.25, 400, sr, 'sine'); // E5
+  const tone2 = generateToneSamples(659.25, 400, sr, 'sine');
 
   const total = tone1.length + silence.length + tone2.length;
   const combined = new Float32Array(total);
@@ -119,7 +119,6 @@ function generateChimeWav(): string {
 }
 
 function generateBeepWav(): string {
-  // Three short beeps
   const sr = 22050;
   const beep = generateToneSamples(880, 150, sr, 'square');
   const gap = new Float32Array(Math.floor(sr * 0.1));
@@ -138,14 +137,12 @@ function generateBeepWav(): string {
 }
 
 function generateBuzzWav(): string {
-  // Low continuous buzz
   return generateWav(220, 800, 22050, 'square');
 }
 
 function generateGentleWav(): string {
-  // Soft ascending melody
   const sr = 22050;
-  const notes = [392, 440, 494]; // G4, A4, B4
+  const notes = [392, 440, 494];
   const parts: Float32Array[] = [];
 
   for (const freq of notes) {
@@ -153,15 +150,68 @@ function generateGentleWav(): string {
     parts.push(new Float32Array(Math.floor(sr * 0.05)));
   }
 
-  const total = parts.reduce((sum, p) => sum + p.length, 0);
-  const combined = new Float32Array(total);
-  let offset = 0;
-  for (const part of parts) {
-    combined.set(part, offset);
-    offset += part.length;
+  return combineParts(parts, sr);
+}
+
+function generateBellsWav(): string {
+  const sr = 22050;
+  const notes = [523.25, 659.25, 783.99, 1046.5];
+  const parts: Float32Array[] = [];
+
+  for (const freq of notes) {
+    parts.push(generateToneSamples(freq, 350, sr, 'sine'));
+    parts.push(new Float32Array(Math.floor(sr * 0.08)));
   }
 
-  return samplesToWavBase64(combined, sr);
+  return combineParts(parts, sr);
+}
+
+function generateFanfareWav(): string {
+  const sr = 22050;
+  const parts: Float32Array[] = [];
+
+  parts.push(generateToneSamples(523.25, 150, sr, 'square'));
+  parts.push(new Float32Array(Math.floor(sr * 0.03)));
+  parts.push(generateToneSamples(659.25, 150, sr, 'square'));
+  parts.push(new Float32Array(Math.floor(sr * 0.03)));
+  parts.push(generateToneSamples(783.99, 150, sr, 'square'));
+  parts.push(new Float32Array(Math.floor(sr * 0.05)));
+  parts.push(generateToneSamples(1046.5, 500, sr, 'square'));
+
+  return combineParts(parts, sr);
+}
+
+function generateXylophoneWav(): string {
+  const sr = 22050;
+  const notes = [523.25, 587.33, 659.25, 783.99, 880];
+  const parts: Float32Array[] = [];
+
+  for (const freq of notes) {
+    parts.push(generateToneSamples(freq, 120, sr, 'triangle'));
+    parts.push(new Float32Array(Math.floor(sr * 0.04)));
+  }
+
+  return combineParts(parts, sr);
+}
+
+function generateUpbeatWav(): string {
+  const sr = 22050;
+  const melody = [
+    { freq: 523.25, dur: 120 },
+    { freq: 659.25, dur: 120 },
+    { freq: 783.99, dur: 120 },
+    { freq: 659.25, dur: 120 },
+    { freq: 783.99, dur: 120 },
+    { freq: 1046.5, dur: 300 },
+  ];
+  const parts: Float32Array[] = [];
+
+  for (const note of melody) {
+    parts.push(generateToneSamples(note.freq, note.dur, sr, 'sine'));
+    parts.push(new Float32Array(Math.floor(sr * 0.03)));
+  }
+
+  return combineParts(parts, sr);
 }
 
 function generateToneSamples(
@@ -197,6 +247,17 @@ function generateToneSamples(
   return samples;
 }
 
+function combineParts(parts: Float32Array[], sampleRate: number): string {
+  const total = parts.reduce((sum, p) => sum + p.length, 0);
+  const combined = new Float32Array(total);
+  let offset = 0;
+  for (const part of parts) {
+    combined.set(part, offset);
+    offset += part.length;
+  }
+  return samplesToWavBase64(combined, sampleRate);
+}
+
 function samplesToWavBase64(samples: Float32Array, sampleRate: number): string {
   const pcmData = new Int16Array(samples.length);
   for (let i = 0; i < samples.length; i++) {
@@ -228,99 +289,6 @@ function samplesToWavBase64(samples: Float32Array, sampleRate: number): string {
   return uint8ToBase64(uint8);
 }
 
-function generateBellsWav(): string {
-  // Church bells: descending major chord C5, E5, G5, C6
-  const sr = 22050;
-  const notes = [523.25, 659.25, 783.99, 1046.5];
-  const parts: Float32Array[] = [];
-
-  for (const freq of notes) {
-    parts.push(generateToneSamples(freq, 350, sr, 'sine'));
-    parts.push(new Float32Array(Math.floor(sr * 0.08)));
-  }
-
-  const total = parts.reduce((sum, p) => sum + p.length, 0);
-  const combined = new Float32Array(total);
-  let offset = 0;
-  for (const part of parts) {
-    combined.set(part, offset);
-    offset += part.length;
-  }
-  return samplesToWavBase64(combined, sr);
-}
-
-function generateFanfareWav(): string {
-  // Triumphant fanfare: C5, E5, G5, hold C6
-  const sr = 22050;
-  const parts: Float32Array[] = [];
-
-  parts.push(generateToneSamples(523.25, 150, sr, 'square')); // C5 short
-  parts.push(new Float32Array(Math.floor(sr * 0.03)));
-  parts.push(generateToneSamples(659.25, 150, sr, 'square')); // E5 short
-  parts.push(new Float32Array(Math.floor(sr * 0.03)));
-  parts.push(generateToneSamples(783.99, 150, sr, 'square')); // G5 short
-  parts.push(new Float32Array(Math.floor(sr * 0.05)));
-  parts.push(generateToneSamples(1046.5, 500, sr, 'square')); // C6 long
-
-  const total = parts.reduce((sum, p) => sum + p.length, 0);
-  const combined = new Float32Array(total);
-  let offset = 0;
-  for (const part of parts) {
-    combined.set(part, offset);
-    offset += part.length;
-  }
-  return samplesToWavBase64(combined, sr);
-}
-
-function generateXylophoneWav(): string {
-  // Playful xylophone: ascending pentatonic scale
-  const sr = 22050;
-  const notes = [523.25, 587.33, 659.25, 783.99, 880]; // C5 D5 E5 G5 A5
-  const parts: Float32Array[] = [];
-
-  for (const freq of notes) {
-    parts.push(generateToneSamples(freq, 120, sr, 'triangle'));
-    parts.push(new Float32Array(Math.floor(sr * 0.04)));
-  }
-
-  const total = parts.reduce((sum, p) => sum + p.length, 0);
-  const combined = new Float32Array(total);
-  let offset = 0;
-  for (const part of parts) {
-    combined.set(part, offset);
-    offset += part.length;
-  }
-  return samplesToWavBase64(combined, sr);
-}
-
-function generateUpbeatWav(): string {
-  // Upbeat melody: happy jingle pattern
-  const sr = 22050;
-  const melody = [
-    { freq: 523.25, dur: 120 }, // C5
-    { freq: 659.25, dur: 120 }, // E5
-    { freq: 783.99, dur: 120 }, // G5
-    { freq: 659.25, dur: 120 }, // E5
-    { freq: 783.99, dur: 120 }, // G5
-    { freq: 1046.5, dur: 300 }, // C6
-  ];
-  const parts: Float32Array[] = [];
-
-  for (const note of melody) {
-    parts.push(generateToneSamples(note.freq, note.dur, sr, 'sine'));
-    parts.push(new Float32Array(Math.floor(sr * 0.03)));
-  }
-
-  const total = parts.reduce((sum, p) => sum + p.length, 0);
-  const combined = new Float32Array(total);
-  let offset = 0;
-  for (const part of parts) {
-    combined.set(part, offset);
-    offset += part.length;
-  }
-  return samplesToWavBase64(combined, sr);
-}
-
 // Sound generator map
 const SOUND_GENERATORS: Record<AlarmSoundId, () => string> = {
   chime: generateChimeWav,
@@ -332,6 +300,27 @@ const SOUND_GENERATORS: Record<AlarmSoundId, () => string> = {
   xylophone: generateXylophoneWav,
   upbeat: generateUpbeatWav,
 };
+
+// Cache for generated WAV file paths
+const wavFileCache: Partial<Record<AlarmSoundId, string>> = {};
+
+/** Write WAV base64 to a temp file and return its URI */
+async function getWavFileUri(soundId: AlarmSoundId): Promise<string> {
+  if (wavFileCache[soundId]) {
+    // Check file still exists
+    const info = await FileSystem.getInfoAsync(wavFileCache[soundId]!);
+    if (info.exists) return wavFileCache[soundId]!;
+  }
+
+  const base64Wav = SOUND_GENERATORS[soundId]();
+  const fileUri = `${FileSystem.cacheDirectory}alarm_${soundId}.wav`;
+  await FileSystem.writeAsStringAsync(fileUri, base64Wav, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+
+  wavFileCache[soundId] = fileUri;
+  return fileUri;
+}
 
 // Cached sound objects
 let currentSound: any = null;
@@ -354,16 +343,16 @@ export async function playAlarm(soundId: AlarmSoundId, volume = 1.0): Promise<vo
       shouldDuckAndroid: false,
     });
 
-    const base64Wav = SOUND_GENERATORS[soundId]();
+    const fileUri = await getWavFileUri(soundId);
     const { sound } = await Audio.Sound.createAsync(
-      { uri: `data:audio/wav;base64,${base64Wav}` },
+      { uri: fileUri },
       { volume, isLooping: false }
     );
 
     currentSound = sound;
     await sound.playAsync();
 
-    // Loop: replay every 2 seconds
+    // Loop: replay every 2.5 seconds
     loopInterval = setInterval(async () => {
       try {
         if (currentSound) {
@@ -373,7 +362,7 @@ export async function playAlarm(soundId: AlarmSoundId, volume = 1.0): Promise<vo
       } catch {
         // Sound may have been unloaded
       }
-    }, 2000);
+    }, 2500);
   } catch (err) {
     console.warn('Failed to play alarm:', err);
   }
@@ -414,9 +403,9 @@ export async function previewAlarm(soundId: AlarmSoundId, volume = 1.0): Promise
       shouldDuckAndroid: true,
     });
 
-    const base64Wav = SOUND_GENERATORS[soundId]();
+    const fileUri = await getWavFileUri(soundId);
     const { sound } = await Audio.Sound.createAsync(
-      { uri: `data:audio/wav;base64,${base64Wav}` },
+      { uri: fileUri },
       { volume }
     );
 

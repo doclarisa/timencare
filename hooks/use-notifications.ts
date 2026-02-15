@@ -30,24 +30,34 @@ export function useNotifications() {
         ids.push(id);
       }
 
-      // Schedule shift end notification
+      // Schedule shift START notification (at exact start time)
+      if (startTime > now) {
+        const id = await scheduleNotification(
+          'Shift Started!',
+          `${event.clientName} shift is starting now — open app and tap Start`,
+          startTime
+        );
+        ids.push(id);
+      }
+
+      // Schedule shift END notification (at exact end time)
       if (endTime > now) {
         const id = await scheduleNotification(
-          'Shift Ended',
-          `${event.clientName} shift has ended — clock out!`,
+          'Shift Ended!',
+          `${event.clientName} shift has ended — open app to stop alarm`,
           endTime
         );
         ids.push(id);
       }
 
-      // Schedule repeating buzz starting at shift end
+      // Schedule repeating buzz notifications starting at shift end
       if (endTime > now) {
         const buzzIds = await scheduleRepeatingBuzz(
           'Clock Out Reminder',
           `Don't forget to clock out of ${event.clientName}`,
           endTime,
-          15,
-          60
+          30, // every 30 seconds
+          10  // max 10 reminders (5 minutes of buzzing)
         );
         ids.push(...buzzIds);
       }

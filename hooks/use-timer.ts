@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Vibration } from 'react-native';
+import { AppState, Vibration } from 'react-native';
 import { useDatabase } from '@/contexts/database-context';
 import { generateId, type CalendarEvent, type Session } from '@/lib/database';
 import { useEvents } from '@/hooks/use-events';
@@ -30,15 +30,10 @@ interface TimerState {
   secondsRemaining: number;
   totalShiftSeconds: number;
   status: TimerStatus;
-  /** Press Start: stops start alarm, begins countdown */
   clockIn: () => void;
-  /** Press Pause: freezes countdown */
   pause: () => void;
-  /** Press Resume: resumes countdown from where it was */
   resume: () => void;
-  /** Press Stop: stops end alarm, marks shift complete */
   clockOut: () => void;
-  /** Reset: go back to waiting state */
   reset: () => void;
   refresh: () => void;
 }
@@ -55,6 +50,10 @@ export function useTimer(): TimerState {
   const startCheckRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const alarmSoundRef = useRef<AlarmSoundId>('chime');
   const alarmVolumeRef = useRef<number>(1.0);
+
+  // Track when the countdown started so we can recalculate after background
+  const countdownStartedAtRef = useRef<number>(0); // wall-clock ms when countdown began
+  const countdownStartValueRef = useRef<number>(0); // seconds remaining when countdown began
 
   // Load alarm settings
   useEffect(() => {
@@ -73,6 +72,17 @@ export function useTimer(): TimerState {
     }
   }, []);
 
+  /** Recalculate remaining seconds based on wall clock (handles background drift) */
+  const recalcRemaining = useCallback(() => {
+    if (countdownStartedAtRef.current === 0) return;
+    const elapsedSec = Math.floor((Date.now() - countdownStartedAtRef.current) / 1000);
+    const remaining = Math.max(0, countdownStartValueRef.current - elapsedSec);
+    setSecondsRemaining(remaining);
+    if (remaining <= 0) {
+      setStatus('end_alarm');
+    }
+  }, []);
+
   const loadShift = useCallback(() => {
     clearAllIntervals();
     stopAlarm();
@@ -88,19 +98,16 @@ export function useTimer(): TimerState {
       return;
     }
 
-    // Use the next upcoming shift, or current one
     const now = new Date();
     const upcoming = shifts.find((s) => new Date(s.endAt) > now) ?? shifts[shifts.length - 1];
     setShift(upcoming);
 
-    // Calculate total shift duration
     const start = new Date(upcoming.startAt).getTime();
     const end = new Date(upcoming.endAt).getTime();
     const durationSec = Math.floor((end - start) / 1000);
     setTotalShiftSeconds(durationSec);
     setSecondsRemaining(durationSec);
 
-    // Check for active session
     try {
       const activeSession = db.getFirstSync<Session>(
         `SELECT * FROM sessions WHERE eventId = ? AND clockOutAt IS NULL ORDER BY clockInAt DESC LIMIT 1`,
@@ -109,12 +116,15 @@ export function useTimer(): TimerState {
 
       if (activeSession) {
         setSession(activeSession);
-        // If there's an active session, resume countdown from where it was
-        // Calculate elapsed time since clock in
         const clockInTime = new Date(activeSession.clockInAt).getTime();
         const elapsed = Math.floor((Date.now() - clockInTime) / 1000);
         const remaining = Math.max(0, durationSec - elapsed);
         setSecondsRemaining(remaining);
+
+        // Set tracking refs for background recovery
+        countdownStartedAtRef.current = clockInTime;
+        countdownStartValueRef.current = durationSec;
+
         if (remaining <= 0) {
           setStatus('end_alarm');
         } else {
@@ -122,7 +132,8 @@ export function useTimer(): TimerState {
         }
       } else {
         setSession(null);
-        // Check if shift start time has already passed
+        countdownStartedAtRef.current = 0;
+        countdownStartValueRef.current = 0;
         if (now.getTime() >= start) {
           setStatus('start_alarm');
         } else {
@@ -135,6 +146,31 @@ export function useTimer(): TimerState {
     }
   }, [db, getTodayWorkShifts, clearAllIntervals]);
 
+  // AppState: recalculate timer when app returns to foreground
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        // Reload alarm settings (user may have changed them on Tools screen)
+        loadAlarmSound().then((s) => { alarmSoundRef.current = s; });
+        loadVolume().then((v) => { alarmVolumeRef.current = v / 100; });
+
+        // Recalculate if timer was running
+        if (status === 'active' && countdownStartedAtRef.current > 0) {
+          recalcRemaining();
+        }
+        // Check if shift start time passed while in background
+        if (status === 'waiting' && shift) {
+          const startTime = new Date(shift.startAt).getTime();
+          if (Date.now() >= startTime) {
+            setStatus('start_alarm');
+          }
+        }
+      }
+    });
+
+    return () => subscription.remove();
+  }, [status, shift, recalcRemaining]);
+
   // Check if shift start time has arrived (when in 'waiting' status)
   useEffect(() => {
     if (status !== 'waiting' || !shift) return;
@@ -146,7 +182,7 @@ export function useTimer(): TimerState {
       }
     };
 
-    checkStartTime(); // Check immediately
+    checkStartTime();
     startCheckRef.current = setInterval(checkStartTime, 1000);
 
     return () => {
@@ -170,7 +206,6 @@ export function useTimer(): TimerState {
         clearInterval(vibInterval);
       };
     } else {
-      // Stop any playing alarm when leaving alarm states
       stopAlarm();
       Vibration.cancel();
     }
@@ -187,15 +222,15 @@ export function useTimer(): TimerState {
     }
 
     intervalRef.current = setInterval(() => {
-      setSecondsRemaining((prev) => {
-        const next = prev - 1;
-        if (next <= 0) {
-          // Shift ended
+      // Use wall-clock calculation instead of decrementing to avoid drift
+      if (countdownStartedAtRef.current > 0) {
+        const elapsedSec = Math.floor((Date.now() - countdownStartedAtRef.current) / 1000);
+        const remaining = Math.max(0, countdownStartValueRef.current - elapsedSec);
+        setSecondsRemaining(remaining);
+        if (remaining <= 0) {
           setStatus('end_alarm');
-          return 0;
         }
-        return next;
-      });
+      }
     }, 1000);
 
     return () => {
@@ -230,9 +265,11 @@ export function useTimer(): TimerState {
 
     setSession(newSession);
 
-    // If currently paused, don't reset the remaining time
+    // If currently paused, don't reset the remaining time — just resume
     if (status !== 'paused') {
       setSecondsRemaining(totalShiftSeconds);
+      countdownStartedAtRef.current = Date.now();
+      countdownStartValueRef.current = totalShiftSeconds;
     }
 
     setStatus('active');
@@ -241,12 +278,20 @@ export function useTimer(): TimerState {
   // Pause: freeze countdown
   const pause = useCallback(() => {
     if (status !== 'active') return;
+    // Save current remaining for when we resume
+    const elapsedSec = Math.floor((Date.now() - countdownStartedAtRef.current) / 1000);
+    const remaining = Math.max(0, countdownStartValueRef.current - elapsedSec);
+    setSecondsRemaining(remaining);
+    countdownStartValueRef.current = remaining;
+    countdownStartedAtRef.current = 0; // Mark as paused
     setStatus('paused');
   }, [status]);
 
   // Resume: continue countdown from where paused
   const resume = useCallback(() => {
     if (status !== 'paused') return;
+    countdownStartedAtRef.current = Date.now();
+    // countdownStartValueRef already holds the frozen remaining
     setStatus('active');
   }, [status]);
 
@@ -264,6 +309,8 @@ export function useTimer(): TimerState {
     }
 
     setSession(null);
+    countdownStartedAtRef.current = 0;
+    countdownStartValueRef.current = 0;
     setStatus('completed');
   }, [db, session]);
 
@@ -282,6 +329,8 @@ export function useTimer(): TimerState {
 
     setSession(null);
     setSecondsRemaining(totalShiftSeconds);
+    countdownStartedAtRef.current = 0;
+    countdownStartValueRef.current = 0;
 
     if (shift) {
       const now = Date.now();
