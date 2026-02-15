@@ -11,7 +11,7 @@ try {
 const SOUND_KEY = 'alarm_sound';
 const VOLUME_KEY = 'alarm_volume';
 
-export type AlarmSoundId = 'chime' | 'beep' | 'buzz' | 'gentle';
+export type AlarmSoundId = 'chime' | 'beep' | 'buzz' | 'gentle' | 'bells' | 'fanfare' | 'xylophone' | 'upbeat';
 
 /** Generates a WAV file buffer with a simple tone */
 function generateWav(
@@ -228,12 +228,109 @@ function samplesToWavBase64(samples: Float32Array, sampleRate: number): string {
   return uint8ToBase64(uint8);
 }
 
+function generateBellsWav(): string {
+  // Church bells: descending major chord C5, E5, G5, C6
+  const sr = 22050;
+  const notes = [523.25, 659.25, 783.99, 1046.5];
+  const parts: Float32Array[] = [];
+
+  for (const freq of notes) {
+    parts.push(generateToneSamples(freq, 350, sr, 'sine'));
+    parts.push(new Float32Array(Math.floor(sr * 0.08)));
+  }
+
+  const total = parts.reduce((sum, p) => sum + p.length, 0);
+  const combined = new Float32Array(total);
+  let offset = 0;
+  for (const part of parts) {
+    combined.set(part, offset);
+    offset += part.length;
+  }
+  return samplesToWavBase64(combined, sr);
+}
+
+function generateFanfareWav(): string {
+  // Triumphant fanfare: C5, E5, G5, hold C6
+  const sr = 22050;
+  const parts: Float32Array[] = [];
+
+  parts.push(generateToneSamples(523.25, 150, sr, 'square')); // C5 short
+  parts.push(new Float32Array(Math.floor(sr * 0.03)));
+  parts.push(generateToneSamples(659.25, 150, sr, 'square')); // E5 short
+  parts.push(new Float32Array(Math.floor(sr * 0.03)));
+  parts.push(generateToneSamples(783.99, 150, sr, 'square')); // G5 short
+  parts.push(new Float32Array(Math.floor(sr * 0.05)));
+  parts.push(generateToneSamples(1046.5, 500, sr, 'square')); // C6 long
+
+  const total = parts.reduce((sum, p) => sum + p.length, 0);
+  const combined = new Float32Array(total);
+  let offset = 0;
+  for (const part of parts) {
+    combined.set(part, offset);
+    offset += part.length;
+  }
+  return samplesToWavBase64(combined, sr);
+}
+
+function generateXylophoneWav(): string {
+  // Playful xylophone: ascending pentatonic scale
+  const sr = 22050;
+  const notes = [523.25, 587.33, 659.25, 783.99, 880]; // C5 D5 E5 G5 A5
+  const parts: Float32Array[] = [];
+
+  for (const freq of notes) {
+    parts.push(generateToneSamples(freq, 120, sr, 'triangle'));
+    parts.push(new Float32Array(Math.floor(sr * 0.04)));
+  }
+
+  const total = parts.reduce((sum, p) => sum + p.length, 0);
+  const combined = new Float32Array(total);
+  let offset = 0;
+  for (const part of parts) {
+    combined.set(part, offset);
+    offset += part.length;
+  }
+  return samplesToWavBase64(combined, sr);
+}
+
+function generateUpbeatWav(): string {
+  // Upbeat melody: happy jingle pattern
+  const sr = 22050;
+  const melody = [
+    { freq: 523.25, dur: 120 }, // C5
+    { freq: 659.25, dur: 120 }, // E5
+    { freq: 783.99, dur: 120 }, // G5
+    { freq: 659.25, dur: 120 }, // E5
+    { freq: 783.99, dur: 120 }, // G5
+    { freq: 1046.5, dur: 300 }, // C6
+  ];
+  const parts: Float32Array[] = [];
+
+  for (const note of melody) {
+    parts.push(generateToneSamples(note.freq, note.dur, sr, 'sine'));
+    parts.push(new Float32Array(Math.floor(sr * 0.03)));
+  }
+
+  const total = parts.reduce((sum, p) => sum + p.length, 0);
+  const combined = new Float32Array(total);
+  let offset = 0;
+  for (const part of parts) {
+    combined.set(part, offset);
+    offset += part.length;
+  }
+  return samplesToWavBase64(combined, sr);
+}
+
 // Sound generator map
 const SOUND_GENERATORS: Record<AlarmSoundId, () => string> = {
   chime: generateChimeWav,
   beep: generateBeepWav,
   buzz: generateBuzzWav,
   gentle: generateGentleWav,
+  bells: generateBellsWav,
+  fanfare: generateFanfareWav,
+  xylophone: generateXylophoneWav,
+  upbeat: generateUpbeatWav,
 };
 
 // Cached sound objects

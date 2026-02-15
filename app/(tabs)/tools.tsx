@@ -19,9 +19,13 @@ import {
 
 const ALARM_SOUNDS: { id: AlarmSoundId; name: string; description: string; icon: string }[] = [
   { id: 'chime', name: 'Chime', description: 'Pleasant bell tone', icon: '\uD83D\uDD14' },
+  { id: 'bells', name: 'Bells', description: 'Church bells chord', icon: '\uD83D\uDD15' },
+  { id: 'fanfare', name: 'Fanfare', description: 'Triumphant horn', icon: '\uD83C\uDFBA' },
+  { id: 'xylophone', name: 'Xylophone', description: 'Playful melody', icon: '\uD83C\uDFB6' },
+  { id: 'gentle', name: 'Gentle', description: 'Soft ascending', icon: '\uD83C\uDFB5' },
+  { id: 'upbeat', name: 'Upbeat', description: 'Happy jingle', icon: '\uD83C\uDF89' },
   { id: 'beep', name: 'Beep', description: 'Classic beep', icon: '\uD83D\uDD0A' },
   { id: 'buzz', name: 'Buzz', description: 'Attention buzz', icon: '\uD83D\uDCE2' },
-  { id: 'gentle', name: 'Gentle', description: 'Soft tone', icon: '\uD83C\uDFB5' },
 ];
 
 export default function ToolsScreen() {

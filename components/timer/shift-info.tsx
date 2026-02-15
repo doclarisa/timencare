@@ -89,7 +89,7 @@ export function ShiftInfo({ shift, status, onClientPress }: ShiftInfoProps) {
 
       {/* Time range */}
       <ThemedText style={styles.timeRange}>
-        {formatTime(shift.startAt)} \u2013 {formatTime(shift.endAt)}
+        {formatTime(shift.startAt)} to {formatTime(shift.endAt)}
       </ThemedText>
 
       {/* Next Action box */}

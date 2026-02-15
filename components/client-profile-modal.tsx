@@ -46,8 +46,8 @@ export function ClientProfileModal({ visible, client, onClose }: ClientProfileMo
   const handleSave = () => {
     const now = new Date().toISOString();
     db.runSync(
-      `UPDATE clients SET name = ?, phone = ?, address = ?, notes = ?, medications = ?, emergencyContact = ?, updatedAt = ? WHERE id = ?`,
-      [editData.name, editData.phone, editData.address, editData.notes, editData.medications, editData.emergencyContact, now, client.id]
+      `UPDATE clients SET name = ?, notes = ?, medications = ?, updatedAt = ? WHERE id = ?`,
+      [editData.name, editData.notes, editData.medications, now, client.id]
     );
     setIsEditing(false);
   };
@@ -98,38 +98,6 @@ export function ClientProfileModal({ visible, client, onClose }: ClientProfileMo
               <ThemedText style={styles.name}>{client.name}</ThemedText>
             )}
 
-            {/* Phone */}
-            <View style={styles.section}>
-              <ThemedText style={styles.sectionLabel}>{'\uD83D\uDCDE'} Phone</ThemedText>
-              {isEditing ? (
-                <TextInput
-                  style={styles.input}
-                  value={editData.phone || ''}
-                  onChangeText={(text) => setEditData({ ...editData, phone: text })}
-                  placeholder="Enter phone number"
-                  keyboardType="phone-pad"
-                />
-              ) : (
-                <ThemedText style={styles.sectionValue}>{client.phone || 'Not set'}</ThemedText>
-              )}
-            </View>
-
-            {/* Address */}
-            <View style={styles.section}>
-              <ThemedText style={styles.sectionLabel}>{'\uD83D\uDCCD'} Address</ThemedText>
-              {isEditing ? (
-                <TextInput
-                  style={styles.input}
-                  value={editData.address || ''}
-                  onChangeText={(text) => setEditData({ ...editData, address: text })}
-                  placeholder="Enter address"
-                  multiline
-                />
-              ) : (
-                <ThemedText style={styles.sectionValue}>{client.address || 'Not set'}</ThemedText>
-              )}
-            </View>
-
             {/* Notes */}
             <View style={styles.section}>
               <ThemedText style={styles.sectionLabel}>{'\uD83D\uDCCB'} Notes</ThemedText>
@@ -162,23 +130,6 @@ export function ClientProfileModal({ visible, client, onClose }: ClientProfileMo
               ) : (
                 <ThemedText style={styles.sectionValue}>
                   {client.medications || 'None listed'}
-                </ThemedText>
-              )}
-            </View>
-
-            {/* Emergency Contact */}
-            <View style={styles.emergencySection}>
-              <ThemedText style={styles.sectionLabel}>{'\uD83D\uDEA8'} Emergency Contact</ThemedText>
-              {isEditing ? (
-                <TextInput
-                  style={styles.input}
-                  value={editData.emergencyContact || ''}
-                  onChangeText={(text) => setEditData({ ...editData, emergencyContact: text })}
-                  placeholder="Name - Phone"
-                />
-              ) : (
-                <ThemedText style={styles.sectionValue}>
-                  {client.emergencyContact || 'Not set'}
                 </ThemedText>
               )}
             </View>
@@ -297,14 +248,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FAF5FF',
     borderWidth: 1,
     borderColor: '#E9D5FF',
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 12,
-  },
-  emergencySection: {
-    backgroundColor: '#FEF2F2',
-    borderWidth: 1,
-    borderColor: '#FECACA',
     borderRadius: 16,
     padding: 18,
     marginBottom: 12,
