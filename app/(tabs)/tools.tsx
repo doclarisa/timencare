@@ -6,7 +6,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useAuth } from '@/contexts/auth-context';
 import { useThemeColor } from '@/hooks/use-theme-color';
-import { getNotificationPermissionStatus, requestNotificationPermissions } from '@/lib/notifications';
+import { getNotificationPermissionStatus, requestNotificationPermissions, scheduleTestNotification, getScheduledNotifications } from '@/lib/notifications';
 import { StatusColors } from '@/constants/theme';
 import {
   previewAlarm,
@@ -62,6 +62,34 @@ export default function ToolsScreen() {
   const handleVolumeChange = async (newVolume: number) => {
     setVolume(newVolume);
     await saveVolume(newVolume);
+  };
+
+  const [testStatus, setTestStatus] = useState('');
+  const [scheduledCount, setScheduledCount] = useState<number | null>(null);
+
+  const handleTestNotification = async () => {
+    try {
+      setTestStatus('Scheduling...');
+      const id = await scheduleTestNotification(10);
+      setTestStatus(`Scheduled! ID: ${id.slice(0, 8)}... Close app now, buzz in 10s`);
+    } catch (err: any) {
+      setTestStatus(`ERROR: ${err.message}`);
+    }
+  };
+
+  const handleShowScheduled = async () => {
+    try {
+      const all = await getScheduledNotifications();
+      setScheduledCount(all.length);
+      // Log details to console
+      console.log('[Scheduled Notifications]', JSON.stringify(all.map(n => ({
+        id: n.identifier,
+        title: n.content.title,
+        trigger: n.trigger,
+      })), null, 2));
+    } catch (err: any) {
+      setTestStatus(`ERROR: ${err.message}`);
+    }
   };
 
   return (
@@ -218,6 +246,29 @@ export default function ToolsScreen() {
           <View style={styles.cardHeader}>
             <ThemedText style={styles.cardHeaderIcon}>{'\u2699\uFE0F'}</ThemedText>
             <ThemedText style={styles.cardTitle}>App Settings</ThemedText>
+          </View>
+
+          {/* Test Notification */}
+          <View style={styles.settingSection}>
+            <Pressable
+              style={styles.testButton}
+              onPress={handleTestNotification}
+            >
+              <ThemedText style={styles.testButtonText}>
+                {'\uD83D\uDD14'} Test Notification (10s delay)
+              </ThemedText>
+            </Pressable>
+            <Pressable
+              style={[styles.testButton, { backgroundColor: '#6B7280', marginTop: 8 }]}
+              onPress={handleShowScheduled}
+            >
+              <ThemedText style={styles.testButtonText}>
+                Show Scheduled ({scheduledCount ?? '?'})
+              </ThemedText>
+            </Pressable>
+            {testStatus ? (
+              <ThemedText style={styles.testStatus}>{testStatus}</ThemedText>
+            ) : null}
           </View>
 
           {/* Notifications */}
@@ -462,6 +513,25 @@ const styles = StyleSheet.create({
   settingRowChevron: {
     fontSize: 16,
     color: '#6B7280',
+  },
+  // Test notification buttons
+  testButton: {
+    backgroundColor: '#3B82F6',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  testButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  testStatus: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 8,
+    textAlign: 'center',
   },
   // Footer
   footer: {
