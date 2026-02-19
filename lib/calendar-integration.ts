@@ -1,10 +1,17 @@
-import * as Calendar from 'expo-calendar';
 import { Platform, Alert } from 'react-native';
 import { type CalendarEvent } from '@/lib/database';
 
+// Lazy-load expo-calendar to avoid crash if native module isn't available (Expo Go)
+let Calendar: typeof import('expo-calendar') | null = null;
+try {
+  Calendar = require('expo-calendar');
+} catch {
+  console.warn('expo-calendar not available (Expo Go?). Phone calendar integration disabled.');
+}
+
 /** Request calendar permissions. Returns true if granted. */
 export async function requestCalendarPermission(): Promise<boolean> {
-  if (Platform.OS === 'web') return false;
+  if (Platform.OS === 'web' || !Calendar) return false;
 
   const { status } = await Calendar.requestCalendarPermissionsAsync();
   return status === 'granted';
@@ -12,10 +19,11 @@ export async function requestCalendarPermission(): Promise<boolean> {
 
 /** Get (or create) a writable calendar ID for this device */
 async function getDefaultCalendarId(): Promise<string | null> {
+  if (!Calendar) return null;
+
   const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
 
   if (Platform.OS === 'android') {
-    // Find the primary Google calendar or the first writable one
     const primary = calendars.find(
       (c) => c.isPrimary && c.allowsModifications
     );
@@ -24,7 +32,6 @@ async function getDefaultCalendarId(): Promise<string | null> {
     const writable = calendars.find((c) => c.allowsModifications);
     if (writable) return writable.id;
 
-    // No writable calendar found
     return null;
   }
 
@@ -40,6 +47,14 @@ async function getDefaultCalendarId(): Promise<string | null> {
 export async function addShiftToPhoneCalendar(
   event: CalendarEvent
 ): Promise<string | null> {
+  if (!Calendar) {
+    Alert.alert(
+      'Not Available',
+      'Phone calendar integration requires a development build. It is not supported in Expo Go.'
+    );
+    return null;
+  }
+
   const granted = await requestCalendarPermission();
   if (!granted) {
     Alert.alert(
