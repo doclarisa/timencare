@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, View, Pressable } from 'react-native';
+import { StyleSheet, View, Pressable, Alert } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { type CalendarEvent, type Client } from '@/lib/database';
 import { type TimerStatus } from '@/hooks/use-timer';
 import { useDatabase } from '@/contexts/database-context';
+import { addShiftToPhoneCalendar } from '@/lib/calendar-integration';
 
 interface ShiftInfoProps {
   shift: CalendarEvent;
@@ -31,6 +32,7 @@ function getStatusLabel(status: TimerStatus): string {
 export function ShiftInfo({ shift, status, onClientPress }: ShiftInfoProps) {
   const db = useDatabase();
   const [client, setClient] = useState<Client | null>(null);
+  const [addedToCalendar, setAddedToCalendar] = useState(false);
 
   useEffect(() => {
     try {
@@ -49,6 +51,14 @@ export function ShiftInfo({ shift, status, onClientPress }: ShiftInfoProps) {
     : shift.type === 'MEDS'
     ? 'Medication Visit'
     : 'Visit';
+
+  const handleAddToCalendar = async () => {
+    const eventId = await addShiftToPhoneCalendar(shift);
+    if (eventId) {
+      setAddedToCalendar(true);
+      Alert.alert('Added!', 'Shift added to your phone calendar with a 15-minute reminder.');
+    }
+  };
 
   const statusLabel = getStatusLabel(status);
   const isActive = status === 'active' || status === 'start_alarm' || status === 'end_alarm';
@@ -91,6 +101,21 @@ export function ShiftInfo({ shift, status, onClientPress }: ShiftInfoProps) {
       <ThemedText style={styles.timeRange}>
         {formatTime(shift.startAt)} to {formatTime(shift.endAt)}
       </ThemedText>
+
+      {/* Add to Phone Calendar */}
+      {!addedToCalendar ? (
+        <Pressable style={styles.calendarButton} onPress={handleAddToCalendar}>
+          <ThemedText style={styles.calendarButtonText}>
+            {'\uD83D\uDCC5'} Add to Phone Calendar
+          </ThemedText>
+        </Pressable>
+      ) : (
+        <View style={styles.calendarAdded}>
+          <ThemedText style={styles.calendarAddedText}>
+            {'\u2705'} Added to Calendar
+          </ThemedText>
+        </View>
+      )}
 
       {/* Next Action box */}
       {(shift.notes || client?.medications) && (
@@ -168,6 +193,34 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1F2937',
     marginBottom: 16,
+  },
+  calendarButton: {
+    backgroundColor: '#EFF6FF',
+    borderWidth: 2,
+    borderColor: '#3B82F6',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  calendarButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#3B82F6',
+  },
+  calendarAdded: {
+    backgroundColor: '#ECFDF5',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  calendarAddedText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#10B981',
   },
   nextActionBox: {
     backgroundColor: '#F3F4F6',

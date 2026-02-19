@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { StyleSheet, ScrollView, RefreshControl, Image, Pressable, View, Modal } from 'react-native';
+import { StyleSheet, ScrollView, RefreshControl, Image, Pressable, View, Modal, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTimer } from '@/hooks/use-timer';
 import { useEvents } from '@/hooks/use-events';
@@ -14,6 +14,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { type Client } from '@/lib/database';
+import { addShiftToPhoneCalendar } from '@/lib/calendar-integration';
 
 export default function TimerScreen() {
   const {
@@ -57,6 +58,17 @@ export default function TimerScreen() {
     refresh();
     if (newEvent) {
       await scheduleShiftReminders(newEvent);
+      Alert.alert(
+        'Add to Phone Calendar?',
+        'Add this event to your phone calendar with a 15-minute reminder?',
+        [
+          { text: 'No thanks', style: 'cancel' },
+          {
+            text: 'Add to Calendar',
+            onPress: () => addShiftToPhoneCalendar(newEvent),
+          },
+        ]
+      );
     }
   };
 

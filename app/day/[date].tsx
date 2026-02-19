@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { StyleSheet, View, Pressable, FlatList, Modal } from 'react-native';
+import { StyleSheet, View, Pressable, FlatList, Modal, Alert } from 'react-native';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { type CalendarEvent } from '@/lib/database';
+import { addShiftToPhoneCalendar } from '@/lib/calendar-integration';
 
 export default function DayViewScreen() {
   const { date } = useLocalSearchParams<{ date: string }>();
@@ -50,18 +51,34 @@ export default function DayViewScreen() {
   };
 
   const handleSave = async (data: EventFormData) => {
+    let savedEvent: CalendarEvent | null = null;
     if (editingEvent) {
       updateEvent({ id: editingEvent.id, ...data });
     } else {
-      const newEvent = createEvent(data);
+      savedEvent = createEvent(data);
       // Schedule meds reminder if applicable
-      if (data.type === 'MEDS' && data.notifyEnabled) {
-        await scheduleMedsReminder(newEvent);
+      if (data.type === 'MEDS' && data.notifyEnabled && savedEvent) {
+        await scheduleMedsReminder(savedEvent);
       }
     }
     setShowForm(false);
     setEditingEvent(null);
     loadEvents();
+
+    // Offer to add to phone calendar for new events
+    if (savedEvent) {
+      Alert.alert(
+        'Add to Phone Calendar?',
+        'Add this event to your phone calendar with a 15-minute reminder?',
+        [
+          { text: 'No thanks', style: 'cancel' },
+          {
+            text: 'Add to Calendar',
+            onPress: () => addShiftToPhoneCalendar(savedEvent!),
+          },
+        ]
+      );
+    }
   };
 
   const handleEdit = (event: CalendarEvent) => {
